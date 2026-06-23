@@ -954,9 +954,15 @@ class BrowserManager {
       }, maxWaitMs);
       
       if (response === "__UI_AUTO_TIMEOUT_EMPTY__") {
-    const dumpPath = "C:\\ais2api\\timeout_dump_" + Date.now() + ".png";
-    await this.page.screenshot({ path: dumpPath });
-    this.logger.error("[UI Auto] Timeout Empty! Saved to " + dumpPath);
+    const os = require('os');
+    const path = require('path');
+    const dumpPath = path.join(os.tmpdir(), "timeout_dump_" + Date.now() + ".png");
+    try {
+        await this.page.screenshot({ path: dumpPath });
+        this.logger.error("[UI Auto] Timeout Empty! Saved to " + dumpPath);
+    } catch (e) {
+        this.logger.error("[UI Auto] Timeout Empty! Failed to save screenshot: " + e.message);
+    }
     response = "";
       } else if (response === "__UI_AUTO_QUOTA_EXCEEDED__") {
         this.logger.warn("[UI Auto] Quota exceeded or paid API key popup detected! Attempting to close popup.");
