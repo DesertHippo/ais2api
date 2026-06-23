@@ -2543,9 +2543,7 @@ class ProxyServerSystem extends EventEmitter {
   async start(initialAuthIndex = null) {
     // <<<--- 1. 重新接收参数
     this.logger.info("[System] 开始弹性启动流程...");
-    await this._startHttpServer();
-    await this._startWebSocketServer();
-    this.logger.info("[System] 准备加载浏览器...");
+        this.logger.info("[System] 准备加载浏览器...");
     const allAvailableIndices = this.authSource.availableIndices;
 
     if (allAvailableIndices.length === 0) {
@@ -2598,6 +2596,11 @@ class ProxyServerSystem extends EventEmitter {
       // 如果所有账号都尝试失败了
       throw new Error("所有认证源均尝试失败，服务器无法启动。");
     }
+    // <<<--- 4. 在浏览器完全就绪后再启动对外服务，避免竞态条件 --->>>
+    this.logger.info("[System] 浏览器环境已就绪，正在启动 HTTP/WS 服务接收流量...");
+    await this._startHttpServer();
+    await this._startWebSocketServer();
+
     this.logger.info(`[System] 代理服务器系统启动完成。`);
     this.emit("started");
   }
