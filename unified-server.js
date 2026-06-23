@@ -869,40 +869,7 @@ class BrowserManager {
             // DUMP DOM state for analysis
             const btnIds = await this.page.evaluate(() => {
               const buttons = Array.from(document.querySelectorAll("button"));
-              return buttons.map(b => b.id + " | " + b.className + " | " + b.innerText.replace(/\n    if (this.context) {
-      this.logger.info("[Browser] 正在关闭旧的浏览器上下文...");
-      try {
-        await this.context.close();
-      } catch (e) {
-        this.logger.warn("[Browser] 关闭旧上下文时发生错误 (可能已崩溃): " + e.message);
-        try {
-            if (this.browser) await this.browser.close();
-        } catch (be) {}
-        this.browser = null;
-      }
-      this.context = null;
-      this.page = null;
-      this.logger.info("[Browser] 旧上下文已清理。");
-    }\n    if (!this.browser) {
-      this.logger.info("🚀 [Browser] 浏览器实例未运行，正在进行首次启动...");
-      if (!fs.existsSync(this.browserExecutablePath)) {
-        throw new Error(
-          `Browser executable not found at path: ${this.browserExecutablePath}`,
-        );
-      }
-      this.browser = await firefox.launch({
-        headless: true,
-        executablePath: this.browserExecutablePath,
-        args: this.launchArgs,
-      });
-      this.browser.on("disconnected", () => {
-        this.logger.error("❌ [Browser] 浏览器意外断开连接！");
-        this.browser = null;
-        this.context = null;
-        this.page = null;
-      });
-      this.logger.info("✅ [Browser] 浏览器实例已成功启动。");
-    }\n/g, " ")).filter(t => t.includes("gemini") || t.includes("3.5")).join("\n");
+              return buttons.map(b => b.id + " | " + b.className + " | " + b.innerText.replace(/\n/g, " ")).filter(t => t.includes("gemini") || t.includes("3.5")).join("\n");
             });
             this.logger.info(`[UI Auto] DEBUG BUTTONS:\n${btnIds}`);
             
