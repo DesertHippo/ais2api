@@ -176,8 +176,12 @@ class BrowserManager {
     this.page = null;
     this.currentAuthIndex = 0;
     this.scriptFileName = "black-browser.js";
+    
     this.noButtonCount = 0;
     this.isWakeupRunning = false;
+    this.uiLock = Promise.resolve();
+    this.uiWaitQueueCount = 0;
+
     this.launchArgs = [
       "--disable-dev-shm-usage", // 关键！防止 /dev/shm 空间不足导致浏览器崩溃
       "--disable-gpu",
@@ -276,7 +280,7 @@ class BrowserManager {
     try {
       this.context = await this.browser.newContext({
         storageState: storageStateObject,
-        viewport: { width: 1920, height: 1080 },
+        viewport: null,
       });
       this.page = await this.context.newPage();
       this.page.on("console", (msg) => {
@@ -801,6 +805,163 @@ class BrowserManager {
       }
     }
     this.isWakeupRunning = false;
+  }
+
+  _acquireUiLock() {
+    let unlockNext;
+    const nextLock = new Promise((resolve) => (unlockNext = resolve));
+    const acquire = this.uiLock.then(() => unlockNext);
+    this.uiLock = nextLock;
+    return acquire;
+  }
+
+  async generateTextViaUI(promptText, modelName, maxWaitMs = 300000) {
+    this.uiWaitQueueCount++;
+    if (this.uiWaitQueueCount > 1) {
+      this.logger.info(`[UI Auto] 撟嗅?霂瑟??㘾?銝?.. (?㘾??? ${this.uiWaitQueueCount - 1})`);
+    }
+    const unlock = await this._acquireUiLock();
+    try {
+      return await this._generateTextViaUIInternal(promptText, modelName, maxWaitMs);
+    } finally {
+      this.uiWaitQueueCount--;
+      unlock();
+    }
+  }
+
+  async _generateTextViaUIInternal(promptText, modelName, maxWaitMs = 300000) {
+    if (!this.page) throw new Error("No browser page available");
+    this.logger.info("[UI Auto] ?? ?嚙締嚙緬? UI 嚙踝蕭?嚙踝蕭?嚙緲?嚙瘩...");
+    
+    try {
+      this.logger.info("[UI Auto] 嚙踝蕭嚙箭?嚙踝蕭嚙?new_chat...");
+      await this.page.goto('https://aistudio.google.com/prompts/new_chat', { waitUntil: 'domcontentloaded' });
+      await this.page.waitForTimeout(2000);
+      if (modelName) {
+        this.logger.info(`[UI Auto] ???珓: ${modelName}...`);
+        try {
+          const currentModel = await this.page.evaluate(() => {
+            const el = document.querySelector("button.model-selector-card span[data-test-id=\"model-name\"]");
+            return el ? el.innerText.trim() : "";
+          });
+          
+          if (!currentModel.includes(modelName)) {
+            await this.page.evaluate(() => document.querySelector("button.model-selector-card")?.click());
+            await this.page.waitForTimeout(1000);
+            
+            // DUMP DOM state for analysis
+            const btnIds = await this.page.evaluate(() => {
+              const buttons = Array.from(document.querySelectorAll("button"));
+              return buttons.map(b => b.id + " | " + b.className + " | " + b.innerText.replace(/\n/g, " ")).filter(t => t.includes("gemini") || t.includes("3.5")).join("\n");
+            });
+            this.logger.info(`[UI Auto] DEBUG BUTTONS:\n${btnIds}`);
+            
+            let targetId = "";
+            if (modelName === "gemini-3.5-flash") targetId = "models/gemini-3.5-flash";
+            else if (modelName === "gemini-3.1-pro-preview") targetId = "models/gemini-3.1-pro-preview";
+            else if (modelName === "gemini-2.5-flash") targetId = "models/gemini-2.5-flash";
+            else targetId = modelName;
+            
+            const clicked = await this.page.evaluate((target) => {
+              let btn = document.querySelector(`button[id="${target}"]`);
+              if (btn) { btn.click(); return true; }
+              
+              btn = document.querySelector(`button[id*="models/${target}"]`);
+              if (btn) { btn.click(); return true; }
+              
+              btn = document.querySelector(`button[id*="${target}"]`);
+              if (btn) { btn.click(); return true; }
+              
+              const spans = Array.from(document.querySelectorAll("button span"));
+              const cleanTarget = target.replace("models/", "").toLowerCase();
+              for (const span of spans) {
+                 if (span.innerText.toLowerCase().includes(cleanTarget)) {
+                    span.closest("button").click();
+                    return true;
+                 }
+              }
+              return false;
+            }, targetId);
+            
+            if (clicked) {
+              this.logger.info(`[UI Auto] ??珓??: ${modelName}`);
+              await this.page.waitForTimeout(1000);
+            } else {
+              this.logger.warn(`[UI Auto] Warning: ${modelName} not found`);
+              await this.page.evaluate(() => document.querySelector("button.model-selector-card")?.click());
+            }
+          } else {
+            this.logger.info(`[UI Auto] ?ew??珓: ${currentModel}`);
+          }
+        } catch (e) {
+          this.logger.warn(`[UI Auto] 嚙踝蕭?嚙課恬蕭嚙踝蕭?: ${e.message}`);
+        }
+      }
+      this.logger.info("[UI Auto] 嚙踝蕭J嚙踝蕭嚙踝蕭?...");
+      await this.page.fill('textarea[aria-label="Enter a prompt"]', promptText);
+      await this.page.waitForTimeout(500);
+      await this.page.focus('textarea[aria-label="Enter a prompt"]');
+      await this.page.keyboard.press('Control+Enter');
+      
+      this.logger.info("[UI Auto] 嚙踝蕭嚙踝蕭?嚙緩嚙箴嚙碼嚙璀嚙踝蕭嚙踝蕭 AI 嚙談佗蕭嚙稷嚙窯 (嚙諒多嚙踝蕭嚙踝蕭 " + (maxWaitMs/1000) + " 嚙踝蕭)...");
+      
+      let response = await this.page.evaluate(async (timeout) => {
+        return new Promise((resolve) => {
+          let lastLength = 0;
+          let unchangedCount = 0;
+          let startTime = Date.now();
+          
+          const check = setInterval(() => {
+            const chunks = document.querySelectorAll('ms-text-chunk:not(.user-chunk)');
+            if (chunks.length > 0) {
+              const lastChunk = chunks[chunks.length - 1];
+              const text = lastChunk.innerText;
+              
+              if (text.length > 0 && text.length === lastLength) {
+                unchangedCount++;
+                if (unchangedCount >= 6) {
+                  clearInterval(check);
+                  resolve(text);
+                }
+              } else {
+                lastLength = text.length;
+                unchangedCount = 0;
+              }
+            }
+            
+            if (Date.now() - startTime > timeout) {
+              clearInterval(check);
+              if (chunks.length === 0) {
+                  resolve("__UI_AUTO_TIMEOUT_EMPTY__");
+              } else {
+                  resolve(chunks.length > 0 ? chunks[chunks.length - 1].innerText : "");
+              }
+            }
+          }, 500);
+        });
+      }, maxWaitMs);
+      
+      if (response === "__UI_AUTO_TIMEOUT_EMPTY__") {
+    const dumpPath = "C:\\ais2api\\timeout_dump_" + Date.now() + ".png";
+    await this.page.screenshot({ path: dumpPath });
+    this.logger.error("[UI Auto] Timeout Empty! Saved to " + dumpPath);
+    response = "";
+      }
+      
+      const finalResponse = response ? response.trim() : "";
+      if (finalResponse === "") {
+        const dumpPath = "C:\\ais2api\\empty_response_dump_" + Date.now() + ".png";
+        await this.page.screenshot({ path: dumpPath });
+        this.logger.error("[UI Auto] 閫貊䔄 EMPTY_RESPONSE ?脰風嚗𣬚𧞄?Ｗ歇摮䁅秐: " + dumpPath);
+        throw new Error("EMPTY_RESPONSE: Failed to generate text!");
+      }
+      
+      this.logger.info("[UI Auto] ?𣂼??脣??踵?摮𦯀葡?瑕漲: " + finalResponse.length);
+      return finalResponse;
+    } catch (e) {
+      this.logger.error("[UI Auto] ? ?⑤?: " + e.message);
+      throw e;
+    }
   }
 }
 
@@ -1368,20 +1529,27 @@ class RequestHandler {
     }
   }
 
-  async processOpenAIRequest(req, res) {
+    async processOpenAIRequest(req, res) {
     if (this.browserManager) {
       this.browserManager.notifyUserActivity();
     }
     const requestId = this._generateRequestId();
+
+    // =====================================================================
+    // ?椘儭??脰風璈笔�嚗?撌脩宏?上ebSocket瑼Ｘ䰻嚗�??箇𣶹?函?UI璅∪?銝漤?閬?
+    // =====================================================================
+
     const isOpenAIStream = req.body.stream === true;
-    const model = req.body.model || "gemini-1.5-pro-latest";
+    
+    // ?? ?躰ㄐ撠望糓??Python ?喃??�芋?卝��??𨀣??喉??脣??嗵鍂?潭㺿??2.5 鈭�?
+    const model = req.body.model || "gemini-2.5-pro"; 
     const systemStreamMode = this.serverSystem.streamingMode;
     const useRealStream = isOpenAIStream && systemStreamMode === "real";
 
     if (this.config.switchOnUses > 0) {
       this.usageCount++;
       this.logger.info(
-        `[Request] OpenAI生成请求 - 账号轮换计数: ${this.usageCount}/${this.config.switchOnUses} (当前账号: ${this.currentAuthIndex})`,
+        `[Request] OpenAI?�?霂瑟? - 韐血噡頧格揢霈⊥㺭: ${this.usageCount}/${this.config.switchOnUses} (敶枏?韐血噡: ${this.currentAuthIndex})`,
       );
       if (this.usageCount >= this.config.switchOnUses) {
         this.needsSwitchingAfterRequest = true;
@@ -1392,223 +1560,36 @@ class RequestHandler {
     try {
       googleBody = this._translateOpenAIToGoogle(req.body, model);
     } catch (error) {
-      this.logger.error(`[Adapter] OpenAI请求翻译失败: ${error.message}`);
-      return this._sendErrorResponse(
-        res,
-        400,
-        "Invalid OpenAI request format.",
-      );
+      this.logger.error(`[Adapter] OpenAI霂瑟?蝧餉?憭梯揖: ${error.message}`);
+      return this._sendErrorResponse(res, 400, "Invalid OpenAI request format");
     }
 
-    const googleEndpoint = useRealStream
-      ? "streamGenerateContent"
-      : "generateContent";
-    const proxyRequest = {
-      path: `/v1beta/models/${model}:${googleEndpoint}`,
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      query_params: useRealStream ? { alt: "sse" } : {},
-      body: JSON.stringify(googleBody),
-      request_id: requestId,
-      is_generative: true,
-      streaming_mode: useRealStream ? "real" : "fake",
-    };
-
-    const messageQueue = this.connectionRegistry.createMessageQueue(requestId);
-
     try {
-      this._forwardRequest(proxyRequest);
-      const initialMessage = await messageQueue.dequeue();
-
-      if (initialMessage.event_type === "error") {
-        this.logger.error(
-          `[Adapter] 收到来自浏览器的错误，将触发切换逻辑。状态码: ${initialMessage.status}, 消息: ${initialMessage.message}`,
-        );
-        await this._handleRequestFailureAndSwitch(initialMessage, res);
-        if (isOpenAIStream) {
-          if (!res.writableEnded) {
-            res.write("data: [DONE]\n\n");
-            res.end();
-          }
-        } else {
-          this._sendErrorResponse(
-            res,
-            initialMessage.status || 500,
-            initialMessage.message,
-          );
-        }
-        return;
-      }
-
-      if (this.failureCount > 0) {
-        this.logger.info(
-          `✅ [Auth] OpenAI接口请求成功 - 失败计数已从 ${this.failureCount} 重置为 0`,
-        );
-        this.failureCount = 0;
-      }
-
+      const promptText = googleBody.contents.map(c => c.parts.map(p => p.text).join("\n")).join("\n");
+      const maxWaitMs = model.toLowerCase().includes("pro") ? 300000 : 40000;
+      const responseText = await this.browserManager.generateTextViaUI(promptText, model, maxWaitMs);
       if (isOpenAIStream) {
-        res.status(200).set({
-          "Content-Type": "text/event-stream",
-          "Cache-Control": "no-cache",
-          Connection: "keep-alive",
-        });
-
-        if (useRealStream) {
-          this.logger.info(`[Adapter] OpenAI 流式响应 (Real Mode) 已启动...`);
-          let lastGoogleChunk = "";
-          const streamState = { inThought: false };
-
-          while (true) {
-            const message = await messageQueue.dequeue(300000); // 5分钟超时
-            if (message.type === "STREAM_END") {
-              if (streamState.inThought) {
-                const closeThoughtPayload = {
-                  id: `chatcmpl-${requestId}`,
-                  object: "chat.completion.chunk",
-                  created: Math.floor(Date.now() / 1000),
-                  model: model,
-                  choices: [
-                    {
-                      index: 0,
-                      delta: { content: "\n</think>\n" },
-                      finish_reason: null,
-                    },
-                  ],
-                };
-                res.write(`data: ${JSON.stringify(closeThoughtPayload)}\n\n`);
-              }
-              res.write("data: [DONE]\n\n");
-              break;
-            }
-            if (message.data) {
-              // [修改] 将 streamState 传递给翻译函数
-              const translatedChunk = this._translateGoogleToOpenAIStream(
-                message.data,
-                model,
-                streamState,
-              );
-              if (translatedChunk) {
-                res.write(translatedChunk);
-              }
-              lastGoogleChunk = message.data;
-            }
-          }
-        } else {
-          this.logger.info(`[Adapter] OpenAI 流式响应 (Fake Mode) 已启动...`);
-
-          let fullBody = "";
-          while (true) {
-            const message = await messageQueue.dequeue(300000);
-            if (message.type === "STREAM_END") break;
-            if (message.data) fullBody += message.data;
-          }
-
-          const translatedChunk = this._translateGoogleToOpenAIStream(
-            fullBody,
-            model,
-          );
-          if (translatedChunk) {
-            res.write(translatedChunk);
-          }
-          res.write("data: [DONE]\n\n");
-          this.logger.info(
-            `[Adapter] Fake模式：已一次性发送完整内容并结束流。`,
-          );
-        }
+        res.status(200).set({ "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache", "Connection": "keep-alive" });
+        const chunk = { id: `chatcmpl-${requestId}`, object: "chat.completion.chunk", created: Math.floor(Date.now() / 1000), model: model, choices: [{ delta: { content: responseText }, index: 0, finish_reason: "stop" }] };
+        res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+        res.write("data: [DONE]\n\n");
+        res.end();
       } else {
-        let fullBody = "";
-        while (true) {
-          const message = await messageQueue.dequeue(300000);
-          if (message.type === "STREAM_END") {
-            break;
-          }
-          if (message.event_type === "chunk" && message.data) {
-            fullBody += message.data;
-          }
-        }
-
-        const googleResponse = JSON.parse(fullBody);
-        const candidate = googleResponse.candidates?.[0];
-
-        let responseContent = "";
-        if (
-          candidate &&
-          candidate.content &&
-          Array.isArray(candidate.content.parts)
-        ) {
-          const imagePart = candidate.content.parts.find((p) => p.inlineData);
-          if (imagePart) {
-            const image = imagePart.inlineData;
-            responseContent = `![Generated Image](data:${image.mimeType};base64,${image.data})`;
-            this.logger.info(
-              "[Adapter] 从 parts.inlineData 中成功解析到图片。",
-            );
-          } else {
-            let mainContent = "";
-            let reasoningContent = "";
-
-            candidate.content.parts.forEach((p) => {
-              if (p.thought) {
-                reasoningContent += p.text;
-              } else {
-                mainContent += p.text;
-              }
-            });
-
-            responseContent = mainContent;
-            var messageObj = {
-              role: "assistant",
-              content: responseContent,
-            };
-            if (reasoningContent) {
-              messageObj.reasoning_content = reasoningContent;
-            }
-          }
-        }
-
-        const openaiResponse = {
-          id: `chatcmpl-${requestId}`,
-          object: "chat.completion",
-          created: Math.floor(Date.now() / 1000),
-          model: model,
-          choices: [
-            {
-              index: 0,
-              // 使用上面构建的 messageObj
-              message: messageObj || { role: "assistant", content: "" },
-              finish_reason: candidate?.finishReason,
-            },
-          ],
-        };
-
-        const finishReason = candidate?.finishReason || "UNKNOWN";
-        this.logger.info(
-          `✅ [Request] OpenAI非流式响应结束，原因: ${finishReason}，请求ID: ${requestId}`,
-        );
-
-        res.status(200).json(openaiResponse);
+        res.status(200).json({ id: `chatcmpl-${requestId}`, object: "chat.completion", created: Math.floor(Date.now() / 1000), model: model, choices: [{ index: 0, message: { role: "assistant", content: responseText }, finish_reason: "stop" }] });
       }
     } catch (error) {
-      this._handleRequestError(error, res);
-    } finally {
-      this.connectionRegistry.removeMessageQueue(requestId);
-      if (this.needsSwitchingAfterRequest) {
-        this.logger.info(
-          `[Auth] OpenAI轮换计数已达到切换阈值 (${this.usageCount}/${this.config.switchOnUses})，将在后台自动切换账号...`,
-        );
-        this._switchToNextAuth().catch((err) => {
-          this.logger.error(`[Auth] 后台账号切换任务失败: ${err.message}`);
-        });
-        this.needsSwitchingAfterRequest = false;
-      }
-      if (!res.writableEnded) {
-        res.end();
-      }
+      this.logger.error(`[Adapter] ${error.message}`);
+      return this._sendErrorResponse(res, 500, "Internal Server Error", error.message);
+    }
+
+    if (this.needsSwitchingAfterRequest) {
+      this._switchToNextAuth().catch((err) => {
+        this.logger.error(`[Auth] ?𤾸蝱韐血噡?�揢隞餃𦛚憭梯揖: ${err.message}`);
+      });
+      this.needsSwitchingAfterRequest = false;
     }
   }
 
-  // --- 新增一个辅助方法，用于发送取消指令 ---
   _cancelBrowserRequest(requestId) {
     const connection = this.connectionRegistry.getFirstConnection();
     if (connection) {
@@ -2626,9 +2607,9 @@ class ProxyServerSystem extends EventEmitter {
     const app = this._createExpressApp();
     this.httpServer = http.createServer(app);
 
-    this.httpServer.keepAliveTimeout = 120000;
-    this.httpServer.headersTimeout = 125000;
-    this.httpServer.requestTimeout = 120000;
+    this.httpServer.keepAliveTimeout = 300000;
+    this.httpServer.headersTimeout = 305000;
+    this.httpServer.requestTimeout = 300000;
 
     return new Promise((resolve) => {
       this.httpServer.listen(this.config.httpPort, this.config.host, () => {
