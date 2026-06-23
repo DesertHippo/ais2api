@@ -227,6 +227,22 @@ class BrowserManager {
   }
 
   async launchOrSwitchContext(authIndex) {
+    if (this.context) {
+      this.logger.info("[Browser] 正在关闭旧的浏览器上下文...");
+      try {
+        try { await this.context.close(); } catch (e) { this.logger.warn('[Browser] 关闭旧上下文时发生错误: ' + e.message); try { if (this.browser) await this.browser.close(); } catch (be) {} this.browser = null; }
+      } catch (e) {
+        this.logger.warn("[Browser] 关闭旧上下文时发生错误 (可能已崩溃): " + e.message);
+        try {
+            if (this.browser) await this.browser.close();
+        } catch (be) {}
+        this.browser = null;
+      }
+      this.context = null;
+      this.page = null;
+      this.logger.info("[Browser] 旧上下文已清理。");
+    }
+
     if (!this.browser) {
       this.logger.info("🚀 [Browser] 浏览器实例未运行，正在进行首次启动...");
       if (!fs.existsSync(this.browserExecutablePath)) {
@@ -247,22 +263,6 @@ class BrowserManager {
       });
       this.logger.info("✅ [Browser] 浏览器实例已成功启动。");
     }
-    if (this.context) {
-      this.logger.info("[Browser] 正在关闭旧的浏览器上下文...");
-      try {
-        await this.context.close();
-      } catch (e) {
-        this.logger.warn("[Browser] 关闭旧上下文时发生错误 (可能已崩溃): " + e.message);
-        try {
-            if (this.browser) await this.browser.close();
-        } catch (be) {}
-        this.browser = null;
-      }
-      this.context = null;
-      this.page = null;
-      this.logger.info("[Browser] 旧上下文已清理。");
-    }
-
     const sourceDescription =
       this.authSource.authMode === "env"
         ? `环境变量 AUTH_JSON_${authIndex}`
