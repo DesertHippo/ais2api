@@ -828,14 +828,15 @@ class BrowserManager {
   }
 
   async _generateTextViaUIInternal(promptText, modelName, maxWaitMs = 300000) {
-    if (!this.page) {
-      this.logger.warn("[Browser] No browser page available, attempting to recover browser...");
+    if (!this.page || this.page.isClosed()) {
+      this.logger.warn("[Browser] No browser page available or page is closed, attempting to recover browser...");
       try {
-        await this.launchOrSwitchContext(this.currentAuthIndex);
+        const targetIndex = this.currentAuthIndex || (this.authSource && this.authSource.availableIndices && this.authSource.availableIndices[0]) || 1;
+        await this.launchOrSwitchContext(targetIndex);
       } catch (err) {
         throw new Error("No browser page available and recovery failed: " + err.message);
       }
-      if (!this.page) {
+      if (!this.page || this.page.isClosed()) {
         throw new Error("No browser page available even after recovery attempt.");
       }
     }
