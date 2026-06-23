@@ -912,7 +912,8 @@ class BrowserManager {
           let startTime = Date.now();
           
           const check = setInterval(() => {
-            if (document.body.innerText.includes('paid API key') || document.body.innerText.includes('Setup billing') || document.body.innerText.includes('quota')) {
+            const bodyText = document.body.innerText.toLowerCase();
+            if (bodyText.includes('paid api key') || bodyText.includes('setup billing') || bodyText.includes('quota') || bodyText.includes('rate limit')) {
               clearInterval(check);
               resolve("__UI_AUTO_QUOTA_EXCEEDED__");
               return;
