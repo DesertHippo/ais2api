@@ -830,7 +830,17 @@ class BrowserManager {
   }
 
   async _generateTextViaUIInternal(promptText, modelName, maxWaitMs = 300000) {
-    if (!this.page) throw new Error("No browser page available");
+    if (!this.page) {
+      this.logger.warn("[Browser] No browser page available, attempting to recover browser...");
+      try {
+        await this.launchOrSwitchContext(this.currentAuthIndex);
+      } catch (err) {
+        throw new Error("No browser page available and recovery failed: " + err.message);
+      }
+      if (!this.page) {
+        throw new Error("No browser page available even after recovery attempt.");
+      }
+    }
     this.logger.info("[UI Auto] ?? ?嚙締嚙緬? UI 嚙踝蕭?嚙踝蕭?嚙緲?嚙瘩...");
     
     try {
