@@ -912,6 +912,12 @@ class BrowserManager {
           let startTime = Date.now();
           
           const check = setInterval(() => {
+            if (document.body.innerText.includes('paid API key') || document.body.innerText.includes('Setup billing') || document.body.innerText.includes('quota')) {
+              clearInterval(check);
+              resolve("__UI_AUTO_QUOTA_EXCEEDED__");
+              return;
+            }
+
             const chunks = document.querySelectorAll('ms-text-chunk:not(.user-chunk)');
             if (chunks.length > 0) {
               const lastChunk = chunks[chunks.length - 1];
@@ -946,6 +952,13 @@ class BrowserManager {
     await this.page.screenshot({ path: dumpPath });
     this.logger.error("[UI Auto] Timeout Empty! Saved to " + dumpPath);
     response = "";
+      } else if (response === "__UI_AUTO_QUOTA_EXCEEDED__") {
+        this.logger.warn("[UI Auto] Quota exceeded or paid API key popup detected! Attempting to close popup.");
+        await this.page.evaluate(() => {
+            const closeBtn = document.querySelector('button[aria-label="Close"]');
+            if (closeBtn) closeBtn.click();
+        });
+        throw new Error("QUOTA_EXCEEDED: Link a paid API key or Setup billing dialog detected");
       }
       
       const finalResponse = response ? response.trim() : "";
@@ -1579,6 +1592,14 @@ class RequestHandler {
       }
     } catch (error) {
       this.logger.error(`[Adapter] ${error.message}`);
+      
+      if (error.message.includes("QUOTA_EXCEEDED")) {
+        this.logger.warn(`[Auth] Quota exceeded detected, scheduling immediate account switch.`);
+        this._switchToNextAuth().catch((err) => {
+          this.logger.error(`[Auth] Error switching auth: ${err.message}`);
+        });
+      }
+      
       return this._sendErrorResponse(res, 500, "Internal Server Error", error.message);
     }
 
