@@ -1564,7 +1564,7 @@ class RequestHandler {
           `[Auth] 轮换计数已达到切换阈值 (${this.usageCount}/${this.config.switchOnUses})，将在后台自动切换账号...`,
         );
         this._switchToNextAuth().catch((err) => {
-          this.logger.error(`[Auth] 后台账号切换任务失败: ${err.message}`);
+          this.logger.error(`[Auth] 處理自動切換帳號時發生錯誤: ${err.message}`);
         });
         this.needsSwitchingAfterRequest = false;
       }
@@ -1625,16 +1625,16 @@ class RequestHandler {
       if (error.message.includes("QUOTA_EXCEEDED")) {
         this.logger.warn(`[Auth] Quota exceeded detected, scheduling immediate account switch.`);
         this._switchToNextAuth().catch((err) => {
-          this.logger.error(`[Auth] Error switching auth: ${err.message}`);
+          this.logger.error(`[Auth] 處理自動切換帳號時發生錯誤: ${err.message}`);
         });
       }
       
-      return this._sendErrorResponse(res, 500, "Internal Server Error", error.message);
+      return this._sendErrorResponse(res, 500, `Internal Server Error: ${error.message}`);
     }
 
     if (this.needsSwitchingAfterRequest) {
       this._switchToNextAuth().catch((err) => {
-        this.logger.error(`[Auth] ?𤾸蝱韐血噡?�揢隞餃𦛚憭梯揖: ${err.message}`);
+        this.logger.error(`[Auth] 處理自動切換帳號時發生錯誤: ${err.message}`);
       });
       this.needsSwitchingAfterRequest = false;
     }
