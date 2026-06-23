@@ -918,6 +918,11 @@ class BrowserManager {
               resolve("__UI_AUTO_QUOTA_EXCEEDED__");
               return;
             }
+            if (bodyText.includes('internal error')) {
+              clearInterval(check);
+              resolve("__UI_AUTO_INTERNAL_ERROR__");
+              return;
+            }
 
             const chunks = document.querySelectorAll('ms-text-chunk:not(.user-chunk)');
             if (chunks.length > 0) {
@@ -960,6 +965,13 @@ class BrowserManager {
             if (closeBtn) closeBtn.click();
         });
         throw new Error("QUOTA_EXCEEDED: Link a paid API key or Setup billing dialog detected");
+      } else if (response === "__UI_AUTO_INTERNAL_ERROR__") {
+        this.logger.warn("[UI Auto] Google Internal Error detected! Attempting to close popup.");
+        await this.page.evaluate(() => {
+            const closeBtn = document.querySelector('button[aria-label="Close"]');
+            if (closeBtn) closeBtn.click();
+        });
+        throw new Error("GOOGLE_INTERNAL_ERROR: An internal error has occurred on Google's backend.");
       }
       
       const finalResponse = response ? response.trim() : "";
