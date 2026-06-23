@@ -249,10 +249,18 @@ class BrowserManager {
     }
     if (this.context) {
       this.logger.info("[Browser] 正在关闭旧的浏览器上下文...");
-      await this.context.close();
+      try {
+        await this.context.close();
+      } catch (e) {
+        this.logger.warn("[Browser] 关闭旧上下文时发生错误 (可能已崩溃): " + e.message);
+        try {
+            if (this.browser) await this.browser.close();
+        } catch (be) {}
+        this.browser = null;
+      }
       this.context = null;
       this.page = null;
-      this.logger.info("[Browser] 旧上下文已关闭。");
+      this.logger.info("[Browser] 旧上下文已清理。");
     }
 
     const sourceDescription =
