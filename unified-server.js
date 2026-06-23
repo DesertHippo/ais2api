@@ -313,9 +313,7 @@ class BrowserManager {
             newUrl !== "about:blank" &&
             !newUrl.includes(this.config.targetUrl)
           ) {
-            this.logger.warn(
-              `⚠️ [Browser] 页面发生了意外导航/刷新！新 URL: ${newUrl}`,
-            );
+            this.logger.warn(`⚠️ [Browser] 頁面發生了跳轉/重新整理！新 URL: ${newUrl}`);
           }
         }
       });
