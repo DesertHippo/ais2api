@@ -1019,7 +1019,9 @@ class LoggingService {
   }
 
   _formatMessage(level, message) {
-    const timestamp = new Date().toISOString();
+    const d = new Date();
+    const pad = (n) => n.toString().padStart(2, '0');
+    const timestamp = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${d.getMilliseconds().toString().padStart(3, '0')}`;
     const formatted = `[${level}] ${timestamp} [${this.serviceName}] - ${message}`;
 
     // 将格式化后的日志存入缓冲区
