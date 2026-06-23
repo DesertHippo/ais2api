@@ -841,14 +841,14 @@ class BrowserManager {
         throw new Error("No browser page available even after recovery attempt.");
       }
     }
-    this.logger.info("[UI Auto] ?? ?嚙締嚙緬? UI 嚙踝蕭?嚙踝蕭?嚙緲?嚙瘩...");
+    this.logger.info("[UI Auto] 開始進行 UI 自動化處理請求...");
     
     try {
-      this.logger.info("[UI Auto] 嚙踝蕭嚙箭?嚙踝蕭嚙?new_chat...");
+      this.logger.info("[UI Auto] 正在導航至 new_chat...");
       await this.page.goto('https://aistudio.google.com/prompts/new_chat', { waitUntil: 'domcontentloaded' });
       await this.page.waitForTimeout(2000);
       if (modelName) {
-        this.logger.info(`[UI Auto] ???珓: ${modelName}...`);
+        this.logger.info(`[UI Auto] 切換模型: ${modelName}...`);
         try {
           const currentModel = await this.page.evaluate(() => {
             const el = document.querySelector("button.model-selector-card span[data-test-id=\"model-name\"]");
@@ -894,26 +894,26 @@ class BrowserManager {
             }, targetId);
             
             if (clicked) {
-              this.logger.info(`[UI Auto] ??珓??: ${modelName}`);
+              this.logger.info(`[UI Auto] 切換模型成功: ${modelName}`);
               await this.page.waitForTimeout(1000);
             } else {
               this.logger.warn(`[UI Auto] Warning: ${modelName} not found`);
               await this.page.evaluate(() => document.querySelector("button.model-selector-card")?.click());
             }
           } else {
-            this.logger.info(`[UI Auto] ?ew??珓: ${currentModel}`);
+            this.logger.info(`[UI Auto] 當前模型為: ${currentModel}`);
           }
         } catch (e) {
-          this.logger.warn(`[UI Auto] 嚙踝蕭?嚙課恬蕭嚙踝蕭?: ${e.message}`);
+          this.logger.warn(`[UI Auto] 切換模型失敗: ${e.message}`);
         }
       }
-      this.logger.info("[UI Auto] 嚙踝蕭J嚙踝蕭嚙踝蕭?...");
+      this.logger.info("[UI Auto] 輸入提示詞...");
       await this.page.fill('textarea[aria-label="Enter a prompt"]', promptText);
       await this.page.waitForTimeout(500);
       await this.page.focus('textarea[aria-label="Enter a prompt"]');
       await this.page.keyboard.press('Control+Enter');
       
-      this.logger.info("[UI Auto] 嚙踝蕭嚙踝蕭?嚙緩嚙箴嚙碼嚙璀嚙踝蕭嚙踝蕭 AI 嚙談佗蕭嚙稷嚙窯 (嚙諒多嚙踝蕭嚙踝蕭 " + (maxWaitMs/1000) + " 嚙踝蕭)...");
+      this.logger.info(`[UI Auto] 提示詞已發出，等待 AI 生成回覆 (最多等待 ${maxWaitMs/1000} 秒)...`);
       
       let response = await this.page.evaluate(async (timeout) => {
         return new Promise((resolve) => {
