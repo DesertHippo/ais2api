@@ -852,18 +852,10 @@ class BrowserManager {
         }
       }
 
-      this.logger.info("[UI Auto] 正在準備新的對話環境...");
-      // 避免整頁重整，透過點擊 Create new prompt 來節省 5 秒鐘
-      const newPromptClicked = await this.page.evaluate(() => {
-        const btn = Array.from(document.querySelectorAll('a, button, div[role="button"]')).find(el => el.innerText && el.innerText.includes('Create new prompt'));
-        if (btn) { btn.click(); return true; }
-        return false;
-      });
-      if (!newPromptClicked) {
-        this.logger.info("[UI Auto] 無法找到快捷按鈕，執行完整導航...");
-        await this.page.goto('https://aistudio.google.com/prompts/new_chat', { waitUntil: 'domcontentloaded' });
-      }
-      await this.page.waitForSelector('textarea[aria-label="Enter a prompt"]', { timeout: 10000 }).catch(() => {});
+      this.logger.info("[UI Auto] 正在重新整理並導航至全新對話環境...");
+      // 強制每次都重新整理網頁，確保 React 狀態完全乾淨，避免長期掛載導致內部錯誤或 DOM 卡死
+      await this.page.goto('https://aistudio.google.com/prompts/new_chat', { waitUntil: 'domcontentloaded' });
+      await this.page.waitForSelector('textarea[aria-label="Enter a prompt"]', { timeout: 15000 }).catch(() => {});
       if (modelName) {
         this.logger.info(`[UI Auto] 切換模型: ${modelName}...`);
         try {
@@ -1680,8 +1672,8 @@ class RequestHandler {
     } catch (error) {
       this.logger.error(`[Adapter] ${error.message}`);
       
-      if (error.message.includes("QUOTA_EXCEEDED")) {
-        this.logger.warn(`[Auth] Quota exceeded detected, scheduling immediate account switch.`);
+      if (error.message.includes("QUOTA_EXCEEDED") || error.message.includes("INTERNAL_ERROR") || error.message.includes("FAILED_TO_START") || error.message.includes("EMPTY_RESPONSE")) {
+        this.logger.warn(`[Auth] 偵測到異常錯誤 (${error.message})，可能帳號已被限制或發生系統錯誤，排定自動切換帳號。`);
         this._switchToNextAuth().catch((err) => {
           this.logger.error(`[Auth] 處理自動切換帳號時發生錯誤: ${err.message}`);
         });
