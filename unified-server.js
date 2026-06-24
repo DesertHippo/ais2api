@@ -947,9 +947,10 @@ class BrowserManager {
           let lastLength = 0;
           let unchangedCount = 0;
           let startTime = Date.now();
+          let lastRetryTime = startTime;
           
           const check = setInterval(() => {
-            const popupElements = document.querySelectorAll('md-dialog, mat-dialog-container, dialog, [role="alertdialog"], [role="dialog"], [role="alert"], snack-bar-container, .error-message, .error');
+            const popupElements = document.querySelectorAll('md-dialog, mat-dialog-container, dialog, [role="alertdialog"], [role="dialog"], [role="alert"], snack-bar-container, .error-message, .error, .model-error');
             let popupText = '';
             popupElements.forEach(el => popupText += el.innerText.toLowerCase() + ' ');
             
@@ -965,6 +966,13 @@ class BrowserManager {
             }
 
             const chunks = document.querySelectorAll('ms-text-chunk:not(.user-chunk)');
+            
+            // 自我修復機制: 如果 UI 還沒開始生成，且 Run 按鈕還在，每隔 5 秒重試點擊一次，避免 React 吃掉第一次的點擊事件
+            if (chunks.length === 0 && Date.now() - lastRetryTime > 5000) {
+                lastRetryTime = Date.now();
+                const iconBtn = document.querySelector('button[aria-label*="Run"]');
+                if (iconBtn && !iconBtn.disabled) iconBtn.click();
+            }
             
             // 快速失敗機制 (Fail-fast): 如果 40 秒後連一個字都沒出來，且畫面沒有「正在生成/思考」的跡象，直接放棄，不要白等 5 分鐘
             if (Date.now() - startTime > 40000 && chunks.length === 0) {
