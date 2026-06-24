@@ -399,11 +399,11 @@ class BrowserManager {
       }
 
       this.logger.info(
-        `[Browser] 进入 3秒 快速检查流程 (目标: Cookie + Got it + 新手引导)...`,
+        `[Browser] 进入 20秒 检查流程 (目标: Cookie + Got it + 新手引导)...`,
       );
 
       const startTime = Date.now();
-      const timeLimit = 3000;
+      const timeLimit = 20000;
 
       // 状态记录表
       const popupStatus = {
