@@ -1617,7 +1617,7 @@ class RequestHandler {
 
     try {
       const promptText = googleBody.contents.map(c => c.parts.map(p => p.text).join("\n")).join("\n");
-      const maxWaitMs = model.toLowerCase().includes("pro") ? 300000 : 40000;
+      const maxWaitMs = 300000; // Increased to 5 minutes for all models to support Thinking mode
       const responseText = await this.browserManager.generateTextViaUI(promptText, model, maxWaitMs);
       if (isOpenAIStream) {
         res.status(200).set({ "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache", "Connection": "keep-alive" });
