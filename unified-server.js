@@ -989,17 +989,14 @@ class BrowserManager {
         });
       }, maxWaitMs);
       
-      if (response === "__UI_AUTO_TIMEOUT_EMPTY__" || response === "__UI_AUTO_FAILED_TO_START__") {
-    const os = require('os');
-    const path = require('path');
-    const dumpPath = path.join(os.tmpdir(), "timeout_dump_" + Date.now() + ".png");
-    try {
-        await this.page.screenshot({ path: dumpPath });
-        this.logger.error(`[UI Auto] ${response === "__UI_AUTO_TIMEOUT_EMPTY__" ? "Timeout Empty" : "Failed to Start"}! Saved to ${dumpPath}`);
-    } catch (e) {
-        this.logger.error("[UI Auto] Screenshot failed: " + e.message);
-    }
-    response = "";
+      if (response === "__UI_AUTO_FAILED_TO_START__") {
+        const dumpPath = "C:\\ais2api\\failed_start_dump_" + Date.now() + ".png";
+        await this.page.screenshot({ path: dumpPath }).catch(() => {});
+        throw new Error("FAILED_TO_START: 40 秒內未偵測到 AI 開始思考或生成，提早中斷以避免卡死。");
+      } else if (response === "__UI_AUTO_TIMEOUT_EMPTY__") {
+        const dumpPath = "C:\\ais2api\\timeout_empty_dump_" + Date.now() + ".png";
+        await this.page.screenshot({ path: dumpPath }).catch(() => {});
+        throw new Error("TIMEOUT: AI 生成時間超過系統設定的最大等待時間。");
       } else if (response === "__UI_AUTO_QUOTA_EXCEEDED__") {
         this.logger.warn("[UI Auto] Quota exceeded or paid API key popup detected! Attempting to close popup.");
         await this.page.evaluate(() => {
@@ -1019,9 +1016,9 @@ class BrowserManager {
       const finalResponse = response ? response.trim() : "";
       if (finalResponse === "") {
         const dumpPath = "C:\\ais2api\\empty_response_dump_" + Date.now() + ".png";
-        await this.page.screenshot({ path: dumpPath });
-        this.logger.error("[UI Auto] 閫貊䔄 EMPTY_RESPONSE ?脰風嚗𣬚𧞄?Ｗ歇摮䁅秐: " + dumpPath);
-        throw new Error("EMPTY_RESPONSE: Failed to generate text!");
+        await this.page.screenshot({ path: dumpPath }).catch(() => {});
+        this.logger.error("[UI Auto] 觸發 EMPTY_RESPONSE 保護機制，截圖已儲存: " + dumpPath);
+        throw new Error("EMPTY_RESPONSE: AI 回覆了空白內容！");
       }
       
       this.logger.info("[UI Auto] ?𣂼??脣??踵?摮𦯀葡?瑕漲: " + finalResponse.length);
