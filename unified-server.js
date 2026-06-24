@@ -835,7 +835,7 @@ class BrowserManager {
     }
   }
 
-  async _generateTextViaUIInternal(promptText, modelName, maxWaitMs = 300000) {
+  async _generateTextViaUIInternal(promptText, modelName, maxWaitMs = 300000, retryCount = 0) {
     if (!this.page || this.page.isClosed()) {
       this.logger.warn("[Browser] No browser page available or page is closed, attempting to recover browser...");
       try {
@@ -1023,7 +1023,14 @@ class BrowserManager {
       this.logger.info("[UI Auto] ?𣂼??脣??踵?摮𦯀葡?瑕漲: " + finalResponse.length);
       return finalResponse;
     } catch (e) {
-      this.logger.error("[UI Auto] ? ?⑤?: " + e.message);
+      if ((e.message.includes("closed") || e.message.includes("Protocol error")) && retryCount < 1) {
+          this.logger.warn("[Browser] 偵測到網頁或瀏覽器已崩潰 (可能是 Cloud Run 閒置中斷)，準備強制重啟並重試...");
+          this.page = null;
+          this.context = null;
+          this.browser = null; // 強制完全重新啟動
+          return await this._generateTextViaUIInternal(promptText, modelName, maxWaitMs, retryCount + 1);
+      }
+      this.logger.error("[UI Auto] 發生異常: " + e.message);
       throw e;
     }
   }
