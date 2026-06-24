@@ -930,6 +930,16 @@ class BrowserManager {
       await this.page.focus('textarea[aria-label="Enter a prompt"]');
       await this.page.keyboard.press('Control+Enter');
       
+      // Fallback: 確保真的有按下去，如果 Control+Enter 被 React 忽略，直接找按鈕點擊
+      await this.page.evaluate(() => {
+         const runBtns = Array.from(document.querySelectorAll('button')).filter(b => b.innerText && b.innerText.includes('Run'));
+         for (const b of runBtns) {
+             if (!b.disabled) b.click();
+         }
+         const iconBtn = document.querySelector('button[aria-label*="Run"]');
+         if (iconBtn && !iconBtn.disabled) iconBtn.click();
+      });
+      
       this.logger.info(`[UI Auto] 提示詞已發出，等待 AI 生成回覆 (最多等待 ${maxWaitMs/1000} 秒)...`);
       
       let response = await this.page.evaluate(async (timeout) => {
@@ -960,7 +970,6 @@ class BrowserManager {
             if (Date.now() - startTime > 40000 && chunks.length === 0) {
               const isGenerating = Array.from(document.querySelectorAll('button')).some(b => b.innerText && b.innerText.includes('Stop')) || 
                                    document.querySelector('button[aria-label="Stop"]') ||
-                                   document.body.innerText.toLowerCase().includes('thinking') ||
                                    document.querySelector('ms-model-thoughts');
                                    
               if (!isGenerating) {
