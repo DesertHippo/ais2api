@@ -917,6 +917,27 @@ class BrowserManager {
         }
       }
       this.logger.info("[UI Auto] 輸入提示詞...");
+      
+      // 安全檢查：確認輸入框是否存在
+      const isTextareaPresent = await this.page.evaluate(() => !!document.querySelector('textarea[aria-label="Enter a prompt"]'));
+      if (!isTextareaPresent) {
+          const currentUrl = this.page.url();
+          this.logger.warn(`[UI Auto] 輸入框不存在！可能被彈出視窗遮擋或被登出。目前網址: ${currentUrl}`);
+          // 嘗試強制關閉可能的干擾視窗
+          await this.page.evaluate(() => {
+              document.querySelectorAll('button').forEach(b => {
+                  if (b.innerText.match(/got it|dismiss|close|ok|agree|accept/i)) b.click();
+              });
+          });
+          await this.page.waitForTimeout(1000);
+          
+          if (currentUrl.includes('signin') || currentUrl.includes('ServiceLogin')) {
+              throw new Error("AUTH_EXPIRED: 帳號已登出，需要更新登入狀態");
+          }
+          
+          throw new Error("FAILED_TO_START: 無法找到對話輸入框，頁面可能加載失敗");
+      }
+
       await this.page.fill('textarea[aria-label="Enter a prompt"]', promptText, { timeout: 10000 });
       await this.page.waitForTimeout(100);
       await this.page.focus('textarea[aria-label="Enter a prompt"]', { timeout: 5000 });
