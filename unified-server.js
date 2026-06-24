@@ -943,8 +943,8 @@ class BrowserManager {
 
             const chunks = document.querySelectorAll('ms-text-chunk:not(.user-chunk)');
             
-            // 快速失敗機制 (Fail-fast): 如果 15 秒後連一個字都沒出來，且畫面沒有「正在生成/思考」的跡象，直接放棄，不要白等 5 分鐘
-            if (Date.now() - startTime > 15000 && chunks.length === 0) {
+            // 快速失敗機制 (Fail-fast): 如果 40 秒後連一個字都沒出來，且畫面沒有「正在生成/思考」的跡象，直接放棄，不要白等 5 分鐘
+            if (Date.now() - startTime > 40000 && chunks.length === 0) {
               const isGenerating = Array.from(document.querySelectorAll('button')).some(b => b.innerText && b.innerText.includes('Stop')) || 
                                    document.querySelector('button[aria-label="Stop"]') ||
                                    bodyText.includes('thinking') ||
