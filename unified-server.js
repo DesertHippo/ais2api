@@ -917,9 +917,9 @@ class BrowserManager {
         }
       }
       this.logger.info("[UI Auto] 輸入提示詞...");
-      await this.page.fill('textarea[aria-label="Enter a prompt"]', promptText);
+      await this.page.fill('textarea[aria-label="Enter a prompt"]', promptText, { timeout: 10000 });
       await this.page.waitForTimeout(100);
-      await this.page.focus('textarea[aria-label="Enter a prompt"]');
+      await this.page.focus('textarea[aria-label="Enter a prompt"]', { timeout: 5000 });
       await this.page.keyboard.press('Control+Enter');
       
       // Fallback: 確保真的有按下去，如果 Control+Enter 被 React 忽略，直接找按鈕點擊
@@ -1672,7 +1672,7 @@ class RequestHandler {
     } catch (error) {
       this.logger.error(`[Adapter] ${error.message}`);
       
-      if (error.message.includes("QUOTA_EXCEEDED") || error.message.includes("INTERNAL_ERROR") || error.message.includes("FAILED_TO_START") || error.message.includes("EMPTY_RESPONSE")) {
+      if (error.message.includes("QUOTA_EXCEEDED") || error.message.includes("INTERNAL_ERROR") || error.message.includes("FAILED_TO_START") || error.message.includes("EMPTY_RESPONSE") || error.message.includes("Timeout")) {
         this.logger.warn(`[Auth] 偵測到異常錯誤 (${error.message})，可能帳號已被限制或發生系統錯誤，排定自動切換帳號。`);
         this._switchToNextAuth().catch((err) => {
           this.logger.error(`[Auth] 處理自動切換帳號時發生錯誤: ${err.message}`);
