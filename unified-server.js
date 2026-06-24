@@ -930,13 +930,16 @@ class BrowserManager {
           let startTime = Date.now();
           
           const check = setInterval(() => {
-            const bodyText = document.body.innerText.toLowerCase();
-            if (bodyText.includes('paid api key') || bodyText.includes('setup billing') || bodyText.includes('quota') || bodyText.includes('rate limit')) {
+            const popupElements = document.querySelectorAll('md-dialog, mat-dialog-container, dialog, [role="alertdialog"], [role="dialog"], [role="alert"], snack-bar-container, .error-message, .error');
+            let popupText = '';
+            popupElements.forEach(el => popupText += el.innerText.toLowerCase() + ' ');
+            
+            if (popupText.includes('paid api key') || popupText.includes('setup billing') || popupText.includes('quota') || popupText.includes('rate limit')) {
               clearInterval(check);
               resolve("__UI_AUTO_QUOTA_EXCEEDED__");
               return;
             }
-            if (bodyText.includes('internal error')) {
+            if (popupText.includes('internal error')) {
               clearInterval(check);
               resolve("__UI_AUTO_INTERNAL_ERROR__");
               return;
@@ -948,7 +951,7 @@ class BrowserManager {
             if (Date.now() - startTime > 40000 && chunks.length === 0) {
               const isGenerating = Array.from(document.querySelectorAll('button')).some(b => b.innerText && b.innerText.includes('Stop')) || 
                                    document.querySelector('button[aria-label="Stop"]') ||
-                                   bodyText.includes('thinking') ||
+                                   document.body.innerText.toLowerCase().includes('thinking') ||
                                    document.querySelector('ms-model-thoughts');
                                    
               if (!isGenerating) {
