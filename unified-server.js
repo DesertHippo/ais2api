@@ -822,11 +822,10 @@ class BrowserManager {
   }
 
   async generateTextViaUI(promptText, modelName, maxWaitMs = 300000) {
-    if (this.uiWaitQueueCount >= 1) {
-      this.logger.warn(`[UI Auto] 伺服器忙碌中，為了避免阻塞與 504 錯誤，直接拒絕請求讓客戶端進行備援切換...`);
-      throw new Error("SERVER_BUSY: The server is currently processing another request.");
-    }
     this.uiWaitQueueCount++;
+    if (this.uiWaitQueueCount > 1) {
+      this.logger.info(`[UI Auto] 撟嗅?霂瑟??㘾?銝?.. (?㘾??? ${this.uiWaitQueueCount - 1})`);
+    }
     const unlock = await this._acquireUiLock();
     try {
       return await this._generateTextViaUIInternal(promptText, modelName, maxWaitMs);
@@ -1715,8 +1714,7 @@ class RequestHandler {
     }
 
     if (lastError) {
-        const statusCode = lastError.message.includes("SERVER_BUSY") ? 503 : 500;
-        return this._sendErrorResponse(res, statusCode, `Server Error: ${lastError.message}`);
+        return this._sendErrorResponse(res, 500, `Internal Server Error: ${lastError.message}`);
     }
 
     try {
