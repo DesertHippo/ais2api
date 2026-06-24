@@ -836,21 +836,22 @@ class BrowserManager {
   }
 
   async _generateTextViaUIInternal(promptText, modelName, maxWaitMs = 300000, retryCount = 0) {
-    if (!this.page || this.page.isClosed()) {
-      this.logger.warn("[Browser] No browser page available or page is closed, attempting to recover browser...");
-      try {
-        const targetIndex = this.currentAuthIndex || (this.authSource && this.authSource.availableIndices && this.authSource.availableIndices[0]) || 1;
-        await this.launchOrSwitchContext(targetIndex);
-      } catch (err) {
-        throw new Error("No browser page available and recovery failed: " + err.message);
-      }
-      if (!this.page || this.page.isClosed()) {
-        throw new Error("No browser page available even after recovery attempt.");
-      }
-    }
     this.logger.info("[UI Auto] 開始進行 UI 自動化處理請求...");
     
     try {
+      if (!this.page || this.page.isClosed()) {
+        this.logger.warn("[Browser] No browser page available or page is closed, attempting to recover browser...");
+        try {
+          const targetIndex = this.currentAuthIndex || (this.authSource && this.authSource.availableIndices && this.authSource.availableIndices[0]) || 1;
+          await this.launchOrSwitchContext(targetIndex);
+        } catch (err) {
+          throw new Error("No browser page available and recovery failed: " + err.message);
+        }
+        if (!this.page || this.page.isClosed()) {
+          throw new Error("No browser page available even after recovery attempt.");
+        }
+      }
+
       this.logger.info("[UI Auto] 正在導航至 new_chat...");
       await this.page.goto('https://aistudio.google.com/prompts/new_chat', { waitUntil: 'domcontentloaded' });
       await this.page.waitForTimeout(2000);
