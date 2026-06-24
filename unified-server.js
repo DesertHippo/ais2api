@@ -942,6 +942,21 @@ class BrowserManager {
             }
 
             const chunks = document.querySelectorAll('ms-text-chunk:not(.user-chunk)');
+            
+            // 快速失敗機制 (Fail-fast): 如果 15 秒後連一個字都沒出來，且畫面沒有「正在生成/思考」的跡象，直接放棄，不要白等 5 分鐘
+            if (Date.now() - startTime > 15000 && chunks.length === 0) {
+              const isGenerating = Array.from(document.querySelectorAll('button')).some(b => b.innerText && b.innerText.includes('Stop')) || 
+                                   document.querySelector('button[aria-label="Stop"]') ||
+                                   bodyText.includes('thinking') ||
+                                   document.querySelector('ms-model-thoughts');
+                                   
+              if (!isGenerating) {
+                  clearInterval(check);
+                  resolve("__UI_AUTO_FAILED_TO_START__");
+                  return;
+              }
+            }
+
             if (chunks.length > 0) {
               const lastChunk = chunks[chunks.length - 1];
               const text = lastChunk.innerText;
@@ -970,15 +985,15 @@ class BrowserManager {
         });
       }, maxWaitMs);
       
-      if (response === "__UI_AUTO_TIMEOUT_EMPTY__") {
+      if (response === "__UI_AUTO_TIMEOUT_EMPTY__" || response === "__UI_AUTO_FAILED_TO_START__") {
     const os = require('os');
     const path = require('path');
     const dumpPath = path.join(os.tmpdir(), "timeout_dump_" + Date.now() + ".png");
     try {
         await this.page.screenshot({ path: dumpPath });
-        this.logger.error("[UI Auto] Timeout Empty! Saved to " + dumpPath);
+        this.logger.error(`[UI Auto] ${response === "__UI_AUTO_TIMEOUT_EMPTY__" ? "Timeout Empty" : "Failed to Start"}! Saved to ${dumpPath}`);
     } catch (e) {
-        this.logger.error("[UI Auto] Timeout Empty! Failed to save screenshot: " + e.message);
+        this.logger.error("[UI Auto] Screenshot failed: " + e.message);
     }
     response = "";
       } else if (response === "__UI_AUTO_QUOTA_EXCEEDED__") {
