@@ -852,9 +852,18 @@ class BrowserManager {
         }
       }
 
-      this.logger.info("[UI Auto] 正在導航至 new_chat...");
-      await this.page.goto('https://aistudio.google.com/prompts/new_chat', { waitUntil: 'domcontentloaded' });
-      await this.page.waitForTimeout(2000);
+      this.logger.info("[UI Auto] 正在準備新的對話環境...");
+      // 避免整頁重整，透過點擊 Create new prompt 來節省 5 秒鐘
+      const newPromptClicked = await this.page.evaluate(() => {
+        const btn = Array.from(document.querySelectorAll('a, button, div[role="button"]')).find(el => el.innerText && el.innerText.includes('Create new prompt'));
+        if (btn) { btn.click(); return true; }
+        return false;
+      });
+      if (!newPromptClicked) {
+        this.logger.info("[UI Auto] 無法找到快捷按鈕，執行完整導航...");
+        await this.page.goto('https://aistudio.google.com/prompts/new_chat', { waitUntil: 'domcontentloaded' });
+      }
+      await this.page.waitForSelector('textarea[aria-label="Enter a prompt"]', { timeout: 10000 }).catch(() => {});
       if (modelName) {
         this.logger.info(`[UI Auto] 切換模型: ${modelName}...`);
         try {
@@ -903,7 +912,7 @@ class BrowserManager {
             
             if (clicked) {
               this.logger.info(`[UI Auto] 切換模型成功: ${modelName}`);
-              await this.page.waitForTimeout(1000);
+              await this.page.waitForTimeout(300);
             } else {
               this.logger.warn(`[UI Auto] Warning: ${modelName} not found`);
               await this.page.evaluate(() => document.querySelector("button.model-selector-card")?.click());
@@ -917,7 +926,7 @@ class BrowserManager {
       }
       this.logger.info("[UI Auto] 輸入提示詞...");
       await this.page.fill('textarea[aria-label="Enter a prompt"]', promptText);
-      await this.page.waitForTimeout(500);
+      await this.page.waitForTimeout(100);
       await this.page.focus('textarea[aria-label="Enter a prompt"]');
       await this.page.keyboard.press('Control+Enter');
       
