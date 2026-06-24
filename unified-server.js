@@ -2563,67 +2563,58 @@ class ProxyServerSystem extends EventEmitter {
   }
 
   async start(initialAuthIndex = null) {
-    // <<<--- 1. 重新接收参数
     this.logger.info("[System] 开始弹性启动流程...");
-        this.logger.info("[System] 准备加载浏览器...");
     const allAvailableIndices = this.authSource.availableIndices;
 
     if (allAvailableIndices.length === 0) {
       throw new Error("没有任何可用的认证源，无法启动。");
     }
 
-    // 2. <<<--- 创建一个优先尝试的启动顺序列表 --->>>
     let startupOrder = [...allAvailableIndices];
     if (initialAuthIndex && allAvailableIndices.includes(initialAuthIndex)) {
-      this.logger.info(
-        `[System] 检测到指定启动索引 #${initialAuthIndex}，将优先尝试。`,
-      );
-      // 将指定索引放到数组第一位，其他索引保持原状
+      this.logger.info(`[System] 检测到指定启动索引 #${initialAuthIndex}，将优先尝试。`);
       startupOrder = [
         initialAuthIndex,
         ...allAvailableIndices.filter((i) => i !== initialAuthIndex),
       ];
     } else {
       if (initialAuthIndex) {
-        this.logger.warn(
-          `[System] 指定的启动索引 #${initialAuthIndex} 无效或不可用，将按默认顺序启动。`,
-        );
+        this.logger.warn(`[System] 指定的启动索引 #${initialAuthIndex} 无效或不可用，将按默认顺序启动。`);
       }
-      this.logger.info(
-        `[System] 未指定有效启动索引，将按默认顺序 [${startupOrder.join(
-          ", ",
-        )}] 尝试。`,
-      );
+      this.logger.info(`[System] 未指定有效启动索引，将按默认顺序 [${startupOrder.join(", ")}] 尝试。`);
     }
 
-    let isStarted = false;
-    // 3. <<<--- 遍历这个新的、可能被重排过的顺序列表 --->>>
-    for (const index of startupOrder) {
-      try {
-        this.logger.info(`[System] 尝试使用账号 #${index} 启动服务...`);
-        await this.browserManager.launchOrSwitchContext(index);
-
-        isStarted = true;
-        this.logger.info(`[System] ✅ 使用账号 #${index} 成功启动！`);
-        break; // 成功启动，跳出循环
-      } catch (error) {
-        this.logger.error(
-          `[System] ❌ 使用账号 #${index} 启动失败。原因: ${error.message}`,
-        );
-        // 失败了，循环将继续，尝试下一个账号
-      }
-    }
-
-    if (!isStarted) {
-      // 如果所有账号都尝试失败了
-      throw new Error("所有认证源均尝试失败，服务器无法启动。");
-    }
-    // <<<--- 4. 在浏览器完全就绪后再启动对外服务，避免竞态条件 --->>>
-    this.logger.info("[System] 浏览器环境已就绪，正在启动 HTTP/WS 服务接收流量...");
+    // <<<--- 优先启动对外服务，避免 Cloud Run 健康检查超时 --->>>
+    this.logger.info("[System] 正在优先启动 HTTP/WS 服务以满足云端健康检查要求...");
     await this._startHttpServer();
     await this._startWebSocketServer();
 
-    this.logger.info(`[System] 代理服务器系统启动完成。`);
+    let isStarted = false;
+    this.logger.info("[System] 准备加载浏览器环境...");
+
+    // 使用 UI 锁防止在启动期间有请求并发触发浏览器重启
+    const unlock = await this.browserManager._acquireUiLock();
+    try {
+      for (const index of startupOrder) {
+        try {
+          this.logger.info(`[System] 尝试使用账号 #${index} 启动服务...`);
+          await this.browserManager.launchOrSwitchContext(index);
+          isStarted = true;
+          this.logger.info(`[System] ✅ 使用账号 #${index} 成功启动！`);
+          break;
+        } catch (error) {
+          this.logger.error(`[System] ❌ 使用账号 #${index} 启动失败。原因: ${error.message}`);
+        }
+      }
+    } finally {
+      unlock();
+    }
+
+    if (!isStarted) {
+      throw new Error("所有认证源均尝试失败，服务器无法启动。");
+    }
+
+    this.logger.info(`[System] 代理服务器系统完全启动完成。`);
     this.emit("started");
   }
 
