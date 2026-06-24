@@ -1677,10 +1677,47 @@ class RequestHandler {
       return this._sendErrorResponse(res, 400, "Invalid OpenAI request format");
     }
 
+    const promptText = googleBody.contents.map(c => c.parts.map(p => p.text).join("\n")).join("\n");
+    const maxWaitMs = 300000; // Increased to 5 minutes for all models to support Thinking mode
+    let responseText = "";
+    let lastError = null;
+
+    const maxGlobalRetries = 2;
+    for (let attempt = 1; attempt <= maxGlobalRetries; attempt++) {
+        try {
+            responseText = await this.browserManager.generateTextViaUI(promptText, model, maxWaitMs);
+            lastError = null; // Success!
+            break; 
+        } catch (error) {
+            this.logger.error(`[Adapter] 第 ${attempt} 次生成嘗試失敗: ${error.message}`);
+            lastError = error;
+            
+            const isRecoverable = error.message.includes("QUOTA_EXCEEDED") || error.message.includes("INTERNAL_ERROR") || error.message.includes("FAILED_TO_START") || error.message.includes("EMPTY_RESPONSE") || error.message.includes("Timeout") || error.message.includes("AUTH_EXPIRED");
+            
+            if (isRecoverable && attempt < maxGlobalRetries) {
+                this.logger.warn(`[Auth] 觸發內部透明重試機制，正在切換帳號並準備第 ${attempt + 1} 次嘗試...`);
+                try {
+                    await this._switchToNextAuth();
+                } catch (switchErr) {
+                    this.logger.error(`[Auth] 切換帳號失敗: ${switchErr.message}`);
+                }
+                continue; // 重新嘗試
+            }
+            
+            // 如果是最後一次嘗試依然失敗，或者是不在可恢復清單內的錯誤
+            if (isRecoverable) {
+                this.logger.warn(`[Auth] 最終嘗試依然失敗 (${error.message})，排定背景切換帳號。`);
+                this._switchToNextAuth().catch(() => {});
+            }
+            break; // 結束迴圈，準備拋出錯誤
+        }
+    }
+
+    if (lastError) {
+        return this._sendErrorResponse(res, 500, `Internal Server Error: ${lastError.message}`);
+    }
+
     try {
-      const promptText = googleBody.contents.map(c => c.parts.map(p => p.text).join("\n")).join("\n");
-      const maxWaitMs = 300000; // Increased to 5 minutes for all models to support Thinking mode
-      const responseText = await this.browserManager.generateTextViaUI(promptText, model, maxWaitMs);
       if (isOpenAIStream) {
         res.status(200).set({ "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache", "Connection": "keep-alive" });
         const chunk = { id: `chatcmpl-${requestId}`, object: "chat.completion.chunk", created: Math.floor(Date.now() / 1000), model: model, choices: [{ delta: { content: responseText }, index: 0, finish_reason: "stop" }] };
@@ -1691,15 +1728,7 @@ class RequestHandler {
         res.status(200).json({ id: `chatcmpl-${requestId}`, object: "chat.completion", created: Math.floor(Date.now() / 1000), model: model, choices: [{ index: 0, message: { role: "assistant", content: responseText }, finish_reason: "stop" }] });
       }
     } catch (error) {
-      this.logger.error(`[Adapter] ${error.message}`);
-      
-      if (error.message.includes("QUOTA_EXCEEDED") || error.message.includes("INTERNAL_ERROR") || error.message.includes("FAILED_TO_START") || error.message.includes("EMPTY_RESPONSE") || error.message.includes("Timeout")) {
-        this.logger.warn(`[Auth] 偵測到異常錯誤 (${error.message})，可能帳號已被限制或發生系統錯誤，排定自動切換帳號。`);
-        this._switchToNextAuth().catch((err) => {
-          this.logger.error(`[Auth] 處理自動切換帳號時發生錯誤: ${err.message}`);
-        });
-      }
-      
+      this.logger.error(`[Adapter] 寫入回應時發生錯誤: ${error.message}`);
       return this._sendErrorResponse(res, 500, `Internal Server Error: ${error.message}`);
     }
 
