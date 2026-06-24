@@ -2592,10 +2592,6 @@ class ProxyServerSystem extends EventEmitter {
       this.logger.info(`[System] 未指定有效启动索引，将按默认顺序 [${startupOrder.join(", ")}] 尝试。`);
     }
 
-    // <<<--- 优先启动对外服务，避免 Cloud Run 健康检查超时 --->>>
-    this.logger.info("[System] 正在优先启动 HTTP/WS 服务以满足云端健康检查要求...");
-    await this._startHttpServer();
-    await this._startWebSocketServer();
 
     let isStarted = false;
     this.logger.info("[System] 准备加载浏览器环境...");
@@ -2621,6 +2617,10 @@ class ProxyServerSystem extends EventEmitter {
     if (!isStarted) {
       throw new Error("所有认证源均尝试失败，服务器无法启动。");
     }
+
+    this.logger.info("[System] 浏览器环境已就绪，正在启动 HTTP/WS 服务器接收外部请求...");
+    await this._startHttpServer();
+    await this._startWebSocketServer();
 
     this.logger.info(`[System] 代理服务器系统完全启动完成。`);
     this.emit("started");
