@@ -813,25 +813,34 @@ class BrowserManager {
     this.isWakeupRunning = false;
   }
 
-  _acquireUiLock() {
+  _acquireUiLock(signal) {
     let unlockNext;
     const nextLock = new Promise((resolve) => (unlockNext = resolve));
-    const acquire = this.uiLock.then(() => unlockNext);
+    const acquire = this.uiLock.then(() => {
+      if (signal && signal.aborted) {
+        unlockNext();
+        throw new Error("CLIENT_DISCONNECTED: The client closed the connection before the lock could be acquired.");
+      }
+      return unlockNext;
+    });
     this.uiLock = nextLock;
     return acquire;
   }
 
-  async generateTextViaUI(promptText, modelName, maxWaitMs = 300000) {
+  async generateTextViaUI(promptText, modelName, maxWaitMs = 300000, signal = null) {
     this.uiWaitQueueCount++;
     if (this.uiWaitQueueCount > 1) {
       this.logger.info(`[UI Auto] 撟嗅?霂瑟??㘾?銝?.. (?㘾??? ${this.uiWaitQueueCount - 1})`);
     }
-    const unlock = await this._acquireUiLock();
+    
+    let unlock;
     try {
+      unlock = await this._acquireUiLock(signal);
+      if (signal && signal.aborted) throw new Error("CLIENT_DISCONNECTED");
       return await this._generateTextViaUIInternal(promptText, modelName, maxWaitMs);
     } finally {
       this.uiWaitQueueCount--;
-      unlock();
+      if (typeof unlock === 'function') unlock();
     }
   }
 
@@ -1643,10 +1652,18 @@ class RequestHandler {
   }
 
     async processOpenAIRequest(req, res) {
-    if (this.browserManager) {
-      this.browserManager.notifyUserActivity();
-    }
-    const requestId = this._generateRequestId();
+      const abortController = new AbortController();
+      req.on('close', () => {
+          if (!res.writableEnded) {
+              this.logger.warn(`[Adapter] Client disconnected prematurely. Aborting queued UI tasks if any.`);
+              abortController.abort();
+          }
+      });
+
+      if (this.browserManager) {
+        this.browserManager.notifyUserActivity();
+      }
+      const requestId = this._generateRequestId();
 
     // =====================================================================
     // ?椘儭??脰風璈笔�嚗?撌脩宏?上ebSocket瑼Ｘ䰻嚗�??箇𣶹?函?UI璅∪?銝漤?閬?
@@ -1685,7 +1702,8 @@ class RequestHandler {
     const maxGlobalRetries = 2;
     for (let attempt = 1; attempt <= maxGlobalRetries; attempt++) {
         try {
-            responseText = await this.browserManager.generateTextViaUI(promptText, model, maxWaitMs);
+            if (abortController.signal.aborted) throw new Error("CLIENT_DISCONNECTED: Request was aborted before generation could start.");
+            responseText = await this.browserManager.generateTextViaUI(promptText, model, maxWaitMs, abortController.signal);
             lastError = null; // Success!
             break; 
         } catch (error) {
