@@ -1718,6 +1718,19 @@ class RequestHandler {
     const maxWaitMs = 300000; // Increased to 5 minutes for all models to support Thinking mode
     let responseText = "";
     let lastError = null;
+    let heartbeatInterval = null;
+
+    if (isOpenAIStream) {
+        res.status(200).set({ "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache", "Connection": "keep-alive" });
+        res.write(`: keepalive\n\n`); // Send initial heartbeat
+        heartbeatInterval = setInterval(() => {
+            if (!res.writableEnded) {
+                res.write(`: keepalive\n\n`);
+            } else {
+                clearInterval(heartbeatInterval);
+            }
+        }, 15000); // 15 seconds
+    }
 
     const maxGlobalRetries = 2;
     for (let attempt = 1; attempt <= maxGlobalRetries; attempt++) {
@@ -1751,13 +1764,21 @@ class RequestHandler {
         }
     }
 
+    if (heartbeatInterval) clearInterval(heartbeatInterval);
+
     if (lastError) {
-        return this._sendErrorResponse(res, 500, `Internal Server Error: ${lastError.message}`);
+        if (res.headersSent) {
+            // Already streaming, send an error chunk that RisuAI can display
+            res.write(`data: ${JSON.stringify({ error: { message: `Internal Server Error: ${lastError.message}` } })}\n\n`);
+            res.end();
+            return;
+        } else {
+            return this._sendErrorResponse(res, 500, `Internal Server Error: ${lastError.message}`);
+        }
     }
 
     try {
       if (isOpenAIStream) {
-        res.status(200).set({ "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache", "Connection": "keep-alive" });
         const chunk = { id: `chatcmpl-${requestId}`, object: "chat.completion.chunk", created: Math.floor(Date.now() / 1000), model: model, choices: [{ delta: { content: responseText }, index: 0, finish_reason: "stop" }] };
         res.write(`data: ${JSON.stringify(chunk)}\n\n`);
         res.write("data: [DONE]\n\n");
@@ -1767,7 +1788,9 @@ class RequestHandler {
       }
     } catch (error) {
       this.logger.error(`[Adapter] 寫入回應時發生錯誤: ${error.message}`);
-      return this._sendErrorResponse(res, 500, `Internal Server Error: ${error.message}`);
+      if (!res.headersSent) {
+        return this._sendErrorResponse(res, 500, `Internal Server Error: ${error.message}`);
+      }
     }
 
     if (this.needsSwitchingAfterRequest) {
