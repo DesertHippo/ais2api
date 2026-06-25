@@ -1752,7 +1752,9 @@ class RequestHandler {
     }
 
     if (lastError) {
-        return this._sendErrorResponse(res, 500, `Internal Server Error: ${lastError.message}`);
+        this.logger.warn(`[Adapter] 所有重試均失敗，將錯誤訊息轉換為正常 AI 回覆傳送給客戶端，避免 Gateway 報錯...`);
+        const errorMsg = lastError.message || "未知錯誤";
+        responseText = `⚠️ **[Proxy 系統警告] 節點生成最終失敗**\n\n**錯誤原因**：${errorMsg}\n\n**可能原因與建議**：\n1. **安全審查 (Prohibited content)**：您的提示詞可能觸發了 Google 的安全攔截。這會導致 AI 回覆空白。請嘗試修改內容，或確保 Cookie 綁定的帳號已在網頁端將 Safety Settings 調為 Block none。\n2. **Google 伺服器異常 (Internal Error)**：Google AI Studio 目前可能處於過載或維修狀態。\n3. **客戶端中斷 (Client Disconnected)**：您的 Gateway 或 Cloud Run 提前切斷了連線。`;
     }
 
     try {
