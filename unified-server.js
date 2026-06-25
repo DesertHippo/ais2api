@@ -1058,7 +1058,7 @@ class BrowserManager {
       
       if (response === "__UI_AUTO_PROHIBITED_CONTENT__") {
         this.logger.warn("[UI Auto] 偵測到 Prohibited content (安全審查攔截)！");
-        return "⚠️ [Proxy System] 您的提示詞已被 Google 官方的安全審查機制攔截 (Prohibited content)。此帳號本次無法生成回覆，請嘗試修改提示詞。如果您是在 Google AI Studio 介面中，請手動點擊右側的 Advanced settings -> Safety Settings 並全部調為 Block none 後更新 Cookie。";
+        throw new Error("PROHIBITED_CONTENT: 提示詞被 Google 安全審查攔截。");
       } else if (response === "__UI_AUTO_FAILED_TO_START__") {
         const dumpPath = "C:\\ais2api\\failed_start_dump_" + Date.now() + ".png";
         await this.page.screenshot({ path: dumpPath }).catch(() => {});
@@ -1730,7 +1730,7 @@ class RequestHandler {
             this.logger.error(`[Adapter] 第 ${attempt} 次生成嘗試失敗: ${error.message}`);
             lastError = error;
             
-            const isRecoverable = error.message.includes("QUOTA_EXCEEDED") || error.message.includes("INTERNAL_ERROR") || error.message.includes("FAILED_TO_START") || error.message.includes("EMPTY_RESPONSE") || error.message.includes("Timeout") || error.message.includes("AUTH_EXPIRED");
+            const isRecoverable = error.message.includes("QUOTA_EXCEEDED") || error.message.includes("INTERNAL_ERROR") || error.message.includes("FAILED_TO_START") || error.message.includes("EMPTY_RESPONSE") || error.message.includes("Timeout") || error.message.includes("AUTH_EXPIRED") || error.message.includes("PROHIBITED_CONTENT");
             
             if (isRecoverable && attempt < maxGlobalRetries) {
                 this.logger.warn(`[Auth] 觸發內部透明重試機制，正在切換帳號並準備第 ${attempt + 1} 次嘗試...`);
@@ -1752,9 +1752,7 @@ class RequestHandler {
     }
 
     if (lastError) {
-        this.logger.warn(`[Adapter] 所有重試均失敗，將錯誤訊息轉換為正常 AI 回覆傳送給客戶端，避免 Gateway 報錯...`);
-        const errorMsg = lastError.message || "未知錯誤";
-        responseText = `⚠️ **[Proxy 系統警告] 節點生成最終失敗**\n\n**錯誤原因**：${errorMsg}\n\n**可能原因與建議**：\n1. **安全審查 (Prohibited content)**：您的提示詞可能觸發了 Google 的安全攔截。這會導致 AI 回覆空白。請嘗試修改內容，或確保 Cookie 綁定的帳號已在網頁端將 Safety Settings 調為 Block none。\n2. **Google 伺服器異常 (Internal Error)**：Google AI Studio 目前可能處於過載或維修狀態。\n3. **客戶端中斷 (Client Disconnected)**：您的 Gateway 或 Cloud Run 提前切斷了連線。`;
+        return this._sendErrorResponse(res, 500, `Internal Server Error: ${lastError.message}`);
     }
 
     try {
