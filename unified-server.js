@@ -1045,11 +1045,21 @@ class BrowserManager {
                   resolve(chunks.length > 0 ? chunks[chunks.length - 1].innerText : "");
               }
             }
+            
+            // Check for Prohibited content safety filter
+            if (document.body.innerText.includes('Prohibited content')) {
+                clearInterval(check);
+                resolve("__UI_AUTO_PROHIBITED_CONTENT__");
+                return;
+            }
           }, 500);
         });
       }, maxWaitMs);
       
-      if (response === "__UI_AUTO_FAILED_TO_START__") {
+      if (response === "__UI_AUTO_PROHIBITED_CONTENT__") {
+        this.logger.warn("[UI Auto] 偵測到 Prohibited content (安全審查攔截)！");
+        return "⚠️ [Proxy System] 您的提示詞已被 Google 官方的安全審查機制攔截 (Prohibited content)。此帳號本次無法生成回覆，請嘗試修改提示詞。如果您是在 Google AI Studio 介面中，請手動點擊右側的 Advanced settings -> Safety Settings 並全部調為 Block none 後更新 Cookie。";
+      } else if (response === "__UI_AUTO_FAILED_TO_START__") {
         const dumpPath = "C:\\ais2api\\failed_start_dump_" + Date.now() + ".png";
         await this.page.screenshot({ path: dumpPath }).catch(() => {});
         throw new Error("FAILED_TO_START: 40 秒內未偵測到 AI 開始思考或生成，提早中斷以避免卡死。");
