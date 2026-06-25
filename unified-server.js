@@ -1025,7 +1025,7 @@ class BrowserManager {
                   return;
               }
 
-              if (text.length === lastLength) {
+              if (text.length > 0 && text.length === lastLength) {
                 unchangedCount++;
                 if (unchangedCount >= 6) {
                   clearInterval(check);
