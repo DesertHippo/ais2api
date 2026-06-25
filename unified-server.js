@@ -315,7 +315,7 @@ class BrowserManager {
       // 增加 2：监听意外的页面跳转或刷新
       this.page.on("framenavigated", (frame) => {
         // 只关注主框架的跳转
-        if (frame === this.page.mainFrame()) {
+        if (this.page && frame === this.page.mainFrame()) {
           const newUrl = frame.url();
           if (
             newUrl !== "about:blank" &&
