@@ -1665,7 +1665,7 @@ class RequestHandler {
 
     async processOpenAIRequest(req, res) {
       const abortController = new AbortController();
-      req.on('close', () => {
+      res.on('close', () => {
           if (!res.writableEnded) {
               this.logger.warn(`[Adapter] Client disconnected prematurely. Aborting queued UI tasks if any.`);
               abortController.abort();
