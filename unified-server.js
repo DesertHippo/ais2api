@@ -1011,9 +1011,21 @@ class BrowserManager {
 
             if (chunks.length > 0) {
               const lastChunk = chunks[chunks.length - 1];
-              const text = lastChunk.innerText;
+              const text = lastChunk.innerText || "";
               
-              if (text.length > 0 && text.length === lastLength) {
+              const isGenerating = Array.from(document.querySelectorAll('button')).some(b => b.innerText && b.innerText.includes('Stop')) || 
+                                   document.querySelector('button[aria-label="Stop"]') ||
+                                   document.querySelector('ms-model-thoughts');
+                                   
+              if (!isGenerating && Date.now() - startTime > 3000) {
+                  // The Stop button is gone and we've waited at least 3 seconds since start.
+                  // Generation is definitively finished!
+                  clearInterval(check);
+                  resolve(text);
+                  return;
+              }
+
+              if (text.length === lastLength) {
                 unchangedCount++;
                 if (unchangedCount >= 6) {
                   clearInterval(check);
