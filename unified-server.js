@@ -1046,8 +1046,16 @@ class BrowserManager {
               }
             }
             
-            // Check for Prohibited content safety filter
-            if (document.body.innerText.includes('Prohibited content')) {
+            // Check for Prohibited content safety filter - ONLY inside popups/dialogs, NOT in AI response text
+            const prohibitedDialogs = document.querySelectorAll('md-dialog, mat-dialog-container, dialog, [role="alertdialog"], [role="dialog"], [role="alert"], .error-message, .model-error');
+            let isProhibited = false;
+            prohibitedDialogs.forEach(el => {
+                const dlgText = (el.innerText || '').toLowerCase();
+                if (dlgText.includes('prohibited content') || dlgText.includes('blocked for safety') || dlgText.includes('safety setting')) {
+                    isProhibited = true;
+                }
+            });
+            if (isProhibited) {
                 clearInterval(check);
                 resolve("__UI_AUTO_PROHIBITED_CONTENT__");
                 return;
