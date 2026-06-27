@@ -884,11 +884,7 @@ class BrowserManager {
             });
             this.logger.info(`[UI Auto] DEBUG BUTTONS:\n${btnIds}`);
             
-            let targetId = "";
-            if (modelName === "gemini-3.5-flash") targetId = "models/gemini-flash-latest"; // Force to actual latest flash to avoid lite/downgrade
-            else if (modelName === "gemini-3.1-pro-preview") targetId = "models/gemini-3.1-pro-preview";
-            else if (modelName === "gemini-2.5-flash") targetId = "models/gemini-2.5-flash";
-            else targetId = modelName;
+            let targetId = modelName;
             
             const clicked = await this.page.evaluate((target) => {
               // 1. EXACT match first
@@ -896,14 +892,14 @@ class BrowserManager {
               if (btn) { btn.click(); return true; }
               
               // 2. Strict exact prefix match
-              btn = document.querySelector(`button[id="models/${target}"]`);
+              btn = document.querySelector(`button[id="model-carousel-row-models/${target}"]`) || document.querySelector(`button[id="models/${target}"]`);
               if (btn) { btn.click(); return true; }
               
               // 3. Precise Span check (Not includes, but exact match of the clean target to prevent flash-lite matching flash)
               const spans = Array.from(document.querySelectorAll("button span[data-test-id='model-name']"));
               const cleanTarget = target.replace("models/", "").replace("gemini-", "").replace(/-/g, " ").toLowerCase();
               for (const span of spans) {
-                 const spanText = span.innerText.toLowerCase();
+                 const spanText = span.innerText.toLowerCase().replace(/-/g, " ");
                  // Precise matching: if target is "3.5 flash", don't match "3.5 flash lite"
                  if (spanText.includes(cleanTarget) && !spanText.includes("lite") && !spanText.includes("image")) {
                     span.closest("button").click();
