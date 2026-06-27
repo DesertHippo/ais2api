@@ -1065,7 +1065,8 @@ class BrowserManager {
 
               if (text.length > 0 && text.length === lastLength) {
                 unchangedCount++;
-                if (unchangedCount >= 6) {
+                const maxUnchanged = isGenerating ? 360 : 6;
+                if (unchangedCount >= maxUnchanged) {
                   clearInterval(check);
                   resolve(text);
                 }
