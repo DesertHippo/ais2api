@@ -885,25 +885,27 @@ class BrowserManager {
             this.logger.info(`[UI Auto] DEBUG BUTTONS:\n${btnIds}`);
             
             let targetId = "";
-            if (modelName === "gemini-3.5-flash") targetId = "models/gemini-3.5-flash";
+            if (modelName === "gemini-3.5-flash") targetId = "models/gemini-flash-latest"; // Force to actual latest flash to avoid lite/downgrade
             else if (modelName === "gemini-3.1-pro-preview") targetId = "models/gemini-3.1-pro-preview";
             else if (modelName === "gemini-2.5-flash") targetId = "models/gemini-2.5-flash";
             else targetId = modelName;
             
             const clicked = await this.page.evaluate((target) => {
+              // 1. EXACT match first
               let btn = document.querySelector(`button[id="${target}"]`);
               if (btn) { btn.click(); return true; }
               
-              btn = document.querySelector(`button[id*="models/${target}"]`);
+              // 2. Strict exact prefix match
+              btn = document.querySelector(`button[id="models/${target}"]`);
               if (btn) { btn.click(); return true; }
               
-              btn = document.querySelector(`button[id*="${target}"]`);
-              if (btn) { btn.click(); return true; }
-              
-              const spans = Array.from(document.querySelectorAll("button span"));
-              const cleanTarget = target.replace("models/", "").toLowerCase();
+              // 3. Precise Span check (Not includes, but exact match of the clean target to prevent flash-lite matching flash)
+              const spans = Array.from(document.querySelectorAll("button span[data-test-id='model-name']"));
+              const cleanTarget = target.replace("models/", "").replace("gemini-", "").replace(/-/g, " ").toLowerCase();
               for (const span of spans) {
-                 if (span.innerText.toLowerCase().includes(cleanTarget)) {
+                 const spanText = span.innerText.toLowerCase();
+                 // Precise matching: if target is "3.5 flash", don't match "3.5 flash lite"
+                 if (spanText.includes(cleanTarget) && !spanText.includes("lite") && !spanText.includes("image")) {
                     span.closest("button").click();
                     return true;
                  }
@@ -3119,6 +3121,50 @@ class ProxyServerSystem extends EventEmitter {
     </html>
     `;
       res.status(200).send(statusHtml);
+    });
+
+    // TEMPORARY DIAGNOSTIC ENDPOINT - check what "Prohibited" text exists on the page
+    app.get("/api/diagnose-prohibited", async (req, res) => {
+      try {
+        if (!browserManager || !browserManager.page) {
+          return res.status(500).json({ error: "No browser page available" });
+        }
+        const results = await browserManager.page.evaluate(() => {
+          const bodyText = document.body.innerText;
+          const matches = [];
+          const searchTerm = 'Prohibited';
+          let idx = 0;
+          while (true) {
+            idx = bodyText.indexOf(searchTerm, idx);
+            if (idx === -1) break;
+            const start = Math.max(0, idx - 150);
+            const end = Math.min(bodyText.length, idx + searchTerm.length + 150);
+            matches.push({ position: idx, context: bodyText.substring(start, end) });
+            idx += searchTerm.length;
+          }
+          const elementMatches = [];
+          document.querySelectorAll('*').forEach(el => {
+            if (el.children.length === 0 && el.innerText && el.innerText.includes('Prohibited')) {
+              elementMatches.push({
+                tag: el.tagName, className: el.className, id: el.id,
+                role: el.getAttribute('role'), ariaLabel: el.getAttribute('aria-label'),
+                parentTag: el.parentElement?.tagName, parentClass: el.parentElement?.className,
+                grandparentTag: el.parentElement?.parentElement?.tagName, 
+                grandparentClass: el.parentElement?.parentElement?.className,
+                text: el.innerText.substring(0, 500)
+              });
+            }
+          });
+          return { bodyLength: bodyText.length, totalMatches: matches.length, matches, elementMatches };
+        });
+        // Also take a screenshot
+        const screenshotPath = "C:\\ais2api\\diagnose_prohibited_" + Date.now() + ".png";
+        await browserManager.page.screenshot({ path: screenshotPath });
+        results.screenshot = screenshotPath;
+        res.status(200).json(results);
+      } catch (err) {
+        res.status(500).json({ error: err.message });
+      }
     });
 
     app.get("/api/status", isAuthenticated, (req, res) => {
