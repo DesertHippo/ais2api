@@ -827,7 +827,7 @@ class BrowserManager {
     return acquire;
   }
 
-  async generateTextViaUI(promptText, modelName, maxWaitMs = 300000, signal = null) {
+  async generateTextViaUI(promptText, modelName, systemInstructions = "", maxWaitMs = 300000, signal = null) {
     this.uiWaitQueueCount++;
     if (this.uiWaitQueueCount > 1) {
       this.logger.info(`[UI Auto] 撟嗅?霂瑟??㘾?銝?.. (?㘾??? ${this.uiWaitQueueCount - 1})`);
@@ -837,14 +837,14 @@ class BrowserManager {
     try {
       unlock = await this._acquireUiLock(signal);
       if (signal && signal.aborted) throw new Error("CLIENT_DISCONNECTED");
-      return await this._generateTextViaUIInternal(promptText, modelName, maxWaitMs);
+      return await this._generateTextViaUIInternal(promptText, modelName, systemInstructions, maxWaitMs);
     } finally {
       this.uiWaitQueueCount--;
       if (typeof unlock === 'function') unlock();
     }
   }
 
-  async _generateTextViaUIInternal(promptText, modelName, maxWaitMs = 300000, retryCount = 0) {
+  async _generateTextViaUIInternal(promptText, modelName, systemInstructions = "", maxWaitMs = 300000, retryCount = 0) {
     this.logger.info("[UI Auto] 開始進行 UI 自動化處理請求...");
     
     try {
@@ -862,9 +862,36 @@ class BrowserManager {
       }
 
       this.logger.info("[UI Auto] 正在重新整理並導航至全新對話環境...");
-      // 強制每次都重新整理網頁，確保 React 狀態完全乾淨，避免長期掛載導致內部錯誤或 DOM 卡死
+      // 強制每次都重新整理網頁，確保 React 状态完全乾淨，避免長期掛載導致內部錯誤或 DOM 卡死
       await this.page.goto('https://aistudio.google.com/prompts/new_chat', { waitUntil: 'domcontentloaded' });
       await this.page.waitForSelector('textarea[aria-label="Enter a prompt"]', { timeout: 15000 }).catch(() => {});
+      
+      // Handle System Instructions Native UI Box
+      if (systemInstructions) {
+        try {
+          this.logger.info("[UI Auto] 偵測到 System Instructions，嘗試輸入至原生設定框...");
+          const sysCard = await this.page.$('.system-instructions-card');
+          if (sysCard) {
+              await sysCard.click();
+              await this.page.waitForTimeout(500); // Wait for sliding panel to open
+              
+              // The textarea inside the system instructions panel has formcontrolname="systemInstructions" or similar
+              // We can find all textareas and pick the one that is NOT the main promptText box
+              await this.page.evaluate((sysText) => {
+                  const tas = Array.from(document.querySelectorAll('textarea'));
+                  const sysTa = tas.find(t => t.getAttribute('aria-label') !== 'Enter a prompt');
+                  if (sysTa) {
+                      sysTa.focus();
+                      document.execCommand('insertText', false, sysText);
+                  }
+              }, systemInstructions);
+              await this.page.waitForTimeout(500);
+          }
+        } catch (err) {
+            this.logger.warn("[UI Auto] 輸入 System Instructions 失敗: " + err.message);
+        }
+      }
+
       if (modelName) {
         this.logger.info(`[UI Auto] 切換模型: ${modelName}...`);
         try {
@@ -1105,7 +1132,7 @@ class BrowserManager {
           this.page = null;
           this.context = null;
           this.browser = null; // 強制完全重新啟動
-          return await this._generateTextViaUIInternal(promptText, modelName, maxWaitMs, retryCount + 1);
+          return await this._generateTextViaUIInternal(promptText, modelName, systemInstructions, maxWaitMs, retryCount + 1);
       }
       this.logger.error("[UI Auto] 發生異常: " + e.message);
       throw e;
@@ -1720,9 +1747,10 @@ class RequestHandler {
       return this._sendErrorResponse(res, 400, "Invalid OpenAI request format");
     }
 
+    let systemInstructionsText = "";
     let formattedPromptText = "";
     if (googleBody.systemInstruction && googleBody.systemInstruction.parts && googleBody.systemInstruction.parts.length > 0) {
-        formattedPromptText += `[System Instructions]\n${googleBody.systemInstruction.parts.map(p => p.text).join("\n")}\n\n`;
+        systemInstructionsText = googleBody.systemInstruction.parts.map(p => p.text).join("\n");
     }
     
     for (const content of googleBody.contents) {
@@ -1754,7 +1782,7 @@ class RequestHandler {
     for (let attempt = 1; attempt <= maxGlobalRetries; attempt++) {
         try {
             if (abortController.signal.aborted) throw new Error("CLIENT_DISCONNECTED: Request was aborted before generation could start.");
-            responseText = await this.browserManager.generateTextViaUI(promptText, model, maxWaitMs, abortController.signal);
+            responseText = await this.browserManager.generateTextViaUI(promptText, model, systemInstructionsText, maxWaitMs, abortController.signal);
             lastError = null; // Success!
             break; 
         } catch (error) {
