@@ -991,6 +991,19 @@ class BrowserManager {
       
       let response = await this.page.evaluate(async (timeout) => {
         return new Promise((resolve) => {
+          function extractText(node) {
+              if (node.nodeType === 3) return node.textContent; // Text node
+              if (node.nodeName === 'BR') return '\n';
+              let text = '';
+              for (let child of node.childNodes) {
+                  text += extractText(child);
+              }
+              if (node.nodeName === 'P' || node.nodeName === 'DIV' || node.nodeName === 'LI') {
+                  text += '\n';
+              }
+              return text;
+          }
+          
           let lastLength = 0;
           let unchangedCount = 0;
           let startTime = Date.now();
@@ -1036,7 +1049,7 @@ class BrowserManager {
 
             if (chunks.length > 0) {
               const lastChunk = chunks[chunks.length - 1];
-              const text = lastChunk.textContent || "";
+              const text = extractText(lastChunk).trim() || "";
               
               const isGenerating = Array.from(document.querySelectorAll('button')).some(b => b.innerText && b.innerText.includes('Stop')) || 
                                    document.querySelector('button[aria-label="Stop"]') ||
@@ -1067,7 +1080,7 @@ class BrowserManager {
               if (chunks.length === 0) {
                   resolve("__UI_AUTO_TIMEOUT_EMPTY__");
               } else {
-                  resolve(chunks.length > 0 ? chunks[chunks.length - 1].textContent : "");
+                  resolve(chunks.length > 0 ? extractText(chunks[chunks.length - 1]).trim() : "");
               }
             }
             
