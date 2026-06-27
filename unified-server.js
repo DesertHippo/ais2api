@@ -1009,7 +1009,7 @@ class BrowserManager {
 
             if (chunks.length > 0) {
               const lastChunk = chunks[chunks.length - 1];
-              const text = lastChunk.innerText || "";
+              const text = lastChunk.textContent || "";
               
               const isGenerating = Array.from(document.querySelectorAll('button')).some(b => b.innerText && b.innerText.includes('Stop')) || 
                                    document.querySelector('button[aria-label="Stop"]') ||
@@ -1040,7 +1040,7 @@ class BrowserManager {
               if (chunks.length === 0) {
                   resolve("__UI_AUTO_TIMEOUT_EMPTY__");
               } else {
-                  resolve(chunks.length > 0 ? chunks[chunks.length - 1].innerText : "");
+                  resolve(chunks.length > 0 ? chunks[chunks.length - 1].textContent : "");
               }
             }
             
