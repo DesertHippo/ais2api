@@ -1720,7 +1720,19 @@ class RequestHandler {
       return this._sendErrorResponse(res, 400, "Invalid OpenAI request format");
     }
 
-    const promptText = googleBody.contents.map(c => c.parts.map(p => p.text).join("\n")).join("\n");
+    let formattedPromptText = "";
+    if (googleBody.systemInstruction && googleBody.systemInstruction.parts && googleBody.systemInstruction.parts.length > 0) {
+        formattedPromptText += `[System Instructions]\n${googleBody.systemInstruction.parts.map(p => p.text).join("\n")}\n\n`;
+    }
+    
+    for (const content of googleBody.contents) {
+        const textParts = content.parts.map(p => p.text).join("\n");
+        const role = content.role === "model" ? "Assistant" : "User";
+        formattedPromptText += `[${role}]\n${textParts}\n\n`;
+    }
+    formattedPromptText += `[Assistant]\n`;
+    
+    const promptText = formattedPromptText.trim();
     const maxWaitMs = 300000; // Increased to 5 minutes for all models to support Thinking mode
     let responseText = "";
     let lastError = null;
