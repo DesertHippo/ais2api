@@ -989,7 +989,7 @@ class BrowserManager {
       
       this.logger.info(`[UI Auto] 提示詞已發出，等待 AI 生成回覆 (最多等待 ${maxWaitMs/1000} 秒)...`);
       
-      let response = await this.page.evaluate(async (timeout) => {
+      let response = await this.page.evaluate(async ({timeout, targetModelName}) => {
         return new Promise((resolve) => {
           function extractText(node) {
               if (node.nodeType === 3) return node.textContent; // Text node
@@ -1038,8 +1038,9 @@ class BrowserManager {
             if (Date.now() - startTime > 40000 && chunks.length === 0) {
               const isGenerating = Array.from(document.querySelectorAll('button')).some(b => b.innerText && b.innerText.includes('Stop')) || 
                                    document.querySelector('button[aria-label*="Stop"]');
+              const isReasoningModel = targetModelName.includes('pro') || targetModelName.includes('think') || targetModelName.includes('reason');
                                    
-              if (!isGenerating) {
+              if (!isGenerating || (!isReasoningModel && Date.now() - startTime > 45000)) {
                   clearInterval(check);
                   resolve("__UI_AUTO_FAILED_TO_START__");
                   return;
@@ -1063,7 +1064,8 @@ class BrowserManager {
 
               if (text.length > 0 && text.length === lastLength) {
                 unchangedCount++;
-                const maxUnchanged = isGenerating ? 360 : 6;
+                const isReasoningModel = targetModelName.includes('pro') || targetModelName.includes('think') || targetModelName.includes('reason');
+                const maxUnchanged = isGenerating ? (isReasoningModel ? 360 : 40) : 6;
                 if (unchangedCount >= maxUnchanged) {
                   clearInterval(check);
                   resolve(text);
@@ -1099,7 +1101,7 @@ class BrowserManager {
             }
           }, 500);
         });
-      }, maxWaitMs);
+      }, {timeout: maxWaitMs, targetModelName: modelName});
       
       if (response === "__UI_AUTO_PROHIBITED_CONTENT__") {
         this.logger.warn("[UI Auto] 偵測到 Prohibited content (安全審查攔截)！");
