@@ -1037,8 +1037,7 @@ class BrowserManager {
             // 快速失敗機制 (Fail-fast): 如果 40 秒後連一個字都沒出來，且畫面沒有「正在生成/思考」的跡象，直接放棄，不要白等 5 分鐘
             if (Date.now() - startTime > 40000 && chunks.length === 0) {
               const isGenerating = Array.from(document.querySelectorAll('button')).some(b => b.innerText && b.innerText.includes('Stop')) || 
-                                   document.querySelector('button[aria-label="Stop"]') ||
-                                   document.querySelector('ms-model-thoughts');
+                                   document.querySelector('button[aria-label*="Stop"]');
                                    
               if (!isGenerating) {
                   clearInterval(check);
@@ -1052,8 +1051,7 @@ class BrowserManager {
               const text = extractText(lastChunk).trim() || "";
               
               const isGenerating = Array.from(document.querySelectorAll('button')).some(b => b.innerText && b.innerText.includes('Stop')) || 
-                                   document.querySelector('button[aria-label="Stop"]') ||
-                                   document.querySelector('ms-model-thoughts');
+                                   document.querySelector('button[aria-label*="Stop"]');
                                    
               if (!isGenerating && Date.now() - startTime > 3000) {
                   // The Stop button is gone and we've waited at least 3 seconds since start.
