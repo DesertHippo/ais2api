@@ -1820,7 +1820,7 @@ class RequestHandler {
             this.logger.error(`[Adapter] 第 ${attempt} 次生成嘗試失敗: ${error.message}`);
             lastError = error;
             
-            const isRecoverable = error.message.includes("QUOTA_EXCEEDED") || error.message.includes("INTERNAL_ERROR") || error.message.includes("FAILED_TO_START") || error.message.includes("EMPTY_RESPONSE") || error.message.includes("Timeout") || error.message.includes("AUTH_EXPIRED") || error.message.includes("PROHIBITED_CONTENT");
+            const isRecoverable = error.message.includes("QUOTA_EXCEEDED") || error.message.includes("INTERNAL_ERROR") || error.message.includes("FAILED_TO_START") || error.message.includes("EMPTY_RESPONSE") || error.message.includes("Timeout") || error.message.includes("AUTH_EXPIRED"); // 移除 PROHIBITED_CONTENT，因為安全審查是綁定 Prompt 的，重試只會浪費時間且無效
             
             if (isRecoverable && attempt < maxGlobalRetries) {
                 this.logger.warn(`[Auth] 觸發內部透明重試機制，正在切換帳號並準備第 ${attempt + 1} 次嘗試...`);
