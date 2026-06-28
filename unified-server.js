@@ -1797,6 +1797,16 @@ class RequestHandler {
                 clearInterval(heartbeatInterval);
             }
         }, 15000); // 15 seconds
+    } else {
+        res.status(200).set({ "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-cache", "Connection": "keep-alive" });
+        res.write(` `); // Send initial whitespace heartbeat to keep GCP alive
+        heartbeatInterval = setInterval(() => {
+            if (!res.writableEnded) {
+                res.write(` `);
+            } else {
+                clearInterval(heartbeatInterval);
+            }
+        }, 15000); // 15 seconds
     }
 
     const maxGlobalRetries = 2;
@@ -1835,8 +1845,12 @@ class RequestHandler {
 
     if (lastError) {
         if (res.headersSent) {
-            // Already streaming, send an error chunk that RisuAI can display
-            res.write(`data: ${JSON.stringify({ error: { message: `Internal Server Error: ${lastError.message}` } })}\n\n`);
+            // Already streaming or sent whitespace heartbeat
+            if (isOpenAIStream) {
+                res.write(`data: ${JSON.stringify({ error: { message: `Internal Server Error: ${lastError.message}` } })}\n\n`);
+            } else {
+                res.write(JSON.stringify({ error: { code: 500, message: `Internal Server Error: ${lastError.message}`, status: "SERVICE_UNAVAILABLE" } }));
+            }
             res.end();
             return;
         } else {
