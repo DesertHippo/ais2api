@@ -1024,6 +1024,11 @@ class BrowserManager {
               resolve("__UI_AUTO_INTERNAL_ERROR__");
               return;
             }
+            if (popupText.match(/something went wrong|network error|failed to fetch|unable to connect|server error/i)) {
+              clearInterval(check);
+              resolve("__UI_AUTO_GENERIC_ERROR__");
+              return;
+            }
 
             const chunks = document.querySelectorAll('ms-text-chunk:not(.user-chunk)');
             
