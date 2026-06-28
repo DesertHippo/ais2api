@@ -1034,12 +1034,14 @@ class BrowserManager {
                 if (iconBtn && !iconBtn.disabled) iconBtn.click();
             }
             
-            // 快速失敗機制 (Fail-fast): 如果 40 秒後連一個字都沒出來，且畫面沒有「正在生成/思考」的跡象，直接放棄，不要白等 5 分鐘
-            if (Date.now() - startTime > 40000 && chunks.length === 0) {
+            // 快速失敗機制 (Fail-fast): 如果等太久連一個字都沒出來，直接放棄並觸發重試機制
+            const isFlash = targetModelName.includes('flash');
+            const failFastLimit = isFlash ? 30000 : 60000;
+            if (Date.now() - startTime > failFastLimit && chunks.length === 0) {
               const isGenerating = Array.from(document.querySelectorAll('button')).some(b => b.innerText && b.innerText.includes('Stop')) || 
                                    document.querySelector('button[aria-label*="Stop"]');
                                    
-              if (!isGenerating) {
+              if (!isGenerating || isFlash) {
                   clearInterval(check);
                   resolve("__UI_AUTO_FAILED_TO_START__");
                   return;
@@ -1063,7 +1065,9 @@ class BrowserManager {
 
               if (text.length > 0 && text.length === lastLength) {
                 unchangedCount++;
-                const maxUnchanged = isGenerating ? 360 : 6;
+                
+                const isFlash = targetModelName.includes('flash');
+                const maxUnchanged = isGenerating ? (isFlash ? 100 : 360) : 6;
                 if (unchangedCount >= maxUnchanged) {
                   clearInterval(check);
                   resolve(text);
