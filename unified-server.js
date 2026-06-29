@@ -1810,6 +1810,8 @@ class RequestHandler {
     }
 
     const maxGlobalRetries = 2;
+    let hasAppliedJailbreak = false;
+
     for (let attempt = 1; attempt <= maxGlobalRetries; attempt++) {
         try {
             if (abortController.signal.aborted) throw new Error("CLIENT_DISCONNECTED: Request was aborted before generation could start.");
@@ -1820,7 +1822,30 @@ class RequestHandler {
             this.logger.error(`[Adapter] 第 ${attempt} 次生成嘗試失敗: ${error.message}`);
             lastError = error;
             
-            const isRecoverable = error.message.includes("QUOTA_EXCEEDED") || error.message.includes("INTERNAL_ERROR") || error.message.includes("FAILED_TO_START") || error.message.includes("EMPTY_RESPONSE") || error.message.includes("Timeout") || error.message.includes("AUTH_EXPIRED"); // 移除 PROHIBITED_CONTENT，因為安全審查是綁定 Prompt 的，重試只會浪費時間且無效
+            let isRecoverable = error.message.includes("QUOTA_EXCEEDED") || error.message.includes("INTERNAL_ERROR") || error.message.includes("FAILED_TO_START") || error.message.includes("EMPTY_RESPONSE") || error.message.includes("Timeout") || error.message.includes("AUTH_EXPIRED"); 
+            
+            if (error.message.includes("PROHIBITED_CONTENT") && !hasAppliedJailbreak) {
+                try {
+                    const fs = require('fs');
+                    const path = require('path');
+                    const jailbreakPath = path.join(process.cwd(), 'jailbreak.txt');
+                    if (fs.existsSync(jailbreakPath)) {
+                        const jailbreakText = fs.readFileSync(jailbreakPath, 'utf8');
+                        if (systemInstructionsText) {
+                            systemInstructionsText += "\n\n" + jailbreakText;
+                        } else {
+                            systemInstructionsText = jailbreakText;
+                        }
+                        this.logger.warn(`[Adapter] 觸發安全審查，已注入 jailbreak.txt (作為 System Prompt) 並準備重試...`);
+                        hasAppliedJailbreak = true;
+                        isRecoverable = true;
+                    } else {
+                        this.logger.warn(`[Adapter] 觸發安全審查，但找不到 jailbreak.txt，放棄重試。`);
+                    }
+                } catch (err) {
+                    this.logger.error(`[Adapter] 注入 jailbreak.txt 失敗: ${err.message}`);
+                }
+            }
             
             if (isRecoverable && attempt < maxGlobalRetries) {
                 this.logger.warn(`[Auth] 觸發內部透明重試機制，正在切換帳號並準備第 ${attempt + 1} 次嘗試...`);
@@ -1844,33 +1869,16 @@ class RequestHandler {
     if (heartbeatInterval) clearInterval(heartbeatInterval);
 
     if (lastError) {
-        const isFatalPromptError = lastError.message.includes("PROHIBITED_CONTENT") || lastError.message.includes("GOOGLE_INTERNAL_ERROR") || lastError.message.includes("FAILED_TO_START") || lastError.message.includes("TIMEOUT");
-        const fakeCompletion = {
-            id: `chatcmpl-${requestId}`,
-            object: "chat.completion",
-            created: Math.floor(Date.now() / 1000),
-            model: model,
-            choices: [{ index: 0, message: { role: "assistant", content: `⚠️ 系統錯誤：\n${lastError.message}` }, finish_reason: "stop" }],
-            usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }
-        };
-
         if (res.headersSent) {
             // Already streaming or sent whitespace heartbeat
             if (isOpenAIStream) {
                 res.write(`data: ${JSON.stringify({ error: { message: `Internal Server Error: ${lastError.message}` } })}\n\n`);
             } else {
-                if (isFatalPromptError) {
-                    res.write(JSON.stringify(fakeCompletion));
-                } else {
-                    res.write(JSON.stringify({ error: { code: 500, message: `Internal Server Error: ${lastError.message}`, status: "SERVICE_UNAVAILABLE" } }));
-                }
+                res.write(JSON.stringify({ error: { code: 500, message: `Internal Server Error: ${lastError.message}`, status: "SERVICE_UNAVAILABLE" } }));
             }
             res.end();
             return;
         } else {
-            if (isFatalPromptError && !isOpenAIStream) {
-                return res.status(200).type("application/json").send(JSON.stringify(fakeCompletion));
-            }
             return this._sendErrorResponse(res, 500, `Internal Server Error: ${lastError.message}`);
         }
     }
