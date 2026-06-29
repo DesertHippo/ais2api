@@ -2291,10 +2291,15 @@ class RequestHandler {
       } catch (e) {}
 
       // 4. 设置正确的JSON响应头，并一次性发送处理过的全部数据
-      res
-        .status(headerMessage.status || 200)
-        .type("application/json")
-        .send(fullBody || "{}");
+      if (res.headersSent) {
+          res.write(fullBody || "{}");
+          res.end();
+      } else {
+          res
+            .status(headerMessage.status || 200)
+            .type("application/json")
+            .send(fullBody || "{}");
+      }
 
       this.logger.info(`[Request] 已向客户端发送完整的非流式响应。`);
     } catch (error) {
