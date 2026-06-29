@@ -1010,24 +1010,49 @@ class BrowserManager {
           let lastRetryTime = startTime;
           
           const check = setInterval(() => {
-            const bodyText = document.body.innerText.toLowerCase();
-            
-            if (bodyText.includes('prohibited content') || bodyText.includes('blocked for safety') || bodyText.includes('safety setting')) {
+            let isProhibited = false;
+            let isQuota = false;
+            let isInternal = false;
+            let isGenericError = false;
+
+            // Safe UI Label Detection (Prevents false positives from long stories or user prompts)
+            const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
+            let node;
+            while ((node = walker.nextNode())) {
+                if (node.parentElement && (node.parentElement.tagName === 'TEXTAREA' || node.parentElement.tagName === 'INPUT' || node.parentElement.closest('textarea'))) continue;
+                const text = node.textContent.trim().toLowerCase();
+                if (text.length === 0) continue;
+                
+                if (text.length < 50 && (text.includes('prohibited content') || text.includes('blocked for safety') || text.includes('safety setting'))) {
+                    isProhibited = true;
+                }
+                if (text.length < 150 && (text.includes('paid api key') || text.includes("you've reached your quota") || text.includes("setup billing"))) {
+                    isQuota = true;
+                }
+                if (text.length < 100 && (text.includes('an internal error has occurred') || text === 'internal error')) {
+                    isInternal = true;
+                }
+                if (text.length < 50 && text.match(/something went wrong|network error|failed to fetch|unable to connect|server error/i)) {
+                    isGenericError = true;
+                }
+            }
+
+            if (isProhibited) {
               clearInterval(check);
               resolve("__UI_AUTO_PROHIBITED_CONTENT__");
               return;
             }
-            if (bodyText.includes('paid api key') || bodyText.includes('setup billing') || bodyText.includes("you've reached your quota for the day")) {
+            if (isQuota) {
               clearInterval(check);
               resolve("__UI_AUTO_QUOTA_EXCEEDED__");
               return;
             }
-            if (bodyText.includes('internal error') || bodyText.includes('an internal error has occurred')) {
+            if (isInternal) {
               clearInterval(check);
               resolve("__UI_AUTO_INTERNAL_ERROR__");
               return;
             }
-            if (bodyText.match(/something went wrong|network error|failed to fetch|unable to connect|server error/i)) {
+            if (isGenericError) {
               clearInterval(check);
               resolve("__UI_AUTO_GENERIC_ERROR__");
               return;
