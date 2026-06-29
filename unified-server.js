@@ -1010,21 +1010,24 @@ class BrowserManager {
           let lastRetryTime = startTime;
           
           const check = setInterval(() => {
-            const popupElements = document.querySelectorAll('md-dialog, mat-dialog-container, dialog, [role="alertdialog"], [role="dialog"], [role="alert"], snack-bar-container, .error-message, .error, .model-error');
-            let popupText = '';
-            popupElements.forEach(el => popupText += el.innerText.toLowerCase() + ' ');
+            const bodyText = document.body.innerText.toLowerCase();
             
-            if (popupText.includes('paid api key') || popupText.includes('setup billing') || popupText.includes('quota') || popupText.includes('rate limit')) {
+            if (bodyText.includes('prohibited content') || bodyText.includes('blocked for safety') || bodyText.includes('safety setting')) {
+              clearInterval(check);
+              resolve("__UI_AUTO_PROHIBITED_CONTENT__");
+              return;
+            }
+            if (bodyText.includes('paid api key') || bodyText.includes('setup billing') || bodyText.includes("you've reached your quota for the day")) {
               clearInterval(check);
               resolve("__UI_AUTO_QUOTA_EXCEEDED__");
               return;
             }
-            if (popupText.includes('internal error')) {
+            if (bodyText.includes('internal error') || bodyText.includes('an internal error has occurred')) {
               clearInterval(check);
               resolve("__UI_AUTO_INTERNAL_ERROR__");
               return;
             }
-            if (popupText.match(/something went wrong|network error|failed to fetch|unable to connect|server error/i)) {
+            if (bodyText.match(/something went wrong|network error|failed to fetch|unable to connect|server error/i)) {
               clearInterval(check);
               resolve("__UI_AUTO_GENERIC_ERROR__");
               return;
@@ -1092,20 +1095,7 @@ class BrowserManager {
               }
             }
             
-            // Check for Prohibited content safety filter - ONLY inside popups/dialogs, NOT in AI response text
-            const prohibitedDialogs = document.querySelectorAll('md-dialog, mat-dialog-container, dialog, [role="alertdialog"], [role="dialog"], [role="alert"], .error-message, .model-error');
-            let isProhibited = false;
-            prohibitedDialogs.forEach(el => {
-                const dlgText = (el.innerText || '').toLowerCase();
-                if (dlgText.includes('prohibited content') || dlgText.includes('blocked for safety') || dlgText.includes('safety setting')) {
-                    isProhibited = true;
-                }
-            });
-            if (isProhibited) {
-                clearInterval(check);
-                resolve("__UI_AUTO_PROHIBITED_CONTENT__");
-                return;
-            }
+            // Cleanup redundant prohibited check since it's now handled globally at the top of the interval
           }, 500);
         });
       }, {timeout: maxWaitMs, targetModelName: modelName});
@@ -1145,7 +1135,16 @@ class BrowserManager {
         throw new Error("EMPTY_RESPONSE: AI 回覆了空白內容！");
       }
       
-      this.logger.info("[UI Auto] ?𣂼??脣??踵?摮𦯀葡?瑕漲: " + finalResponse.length);
+      // [解決方案] 鐵證紀錄：把 AI 成功生成的完整內容寫入本機檔案，以供驗證
+      try {
+          const fs = require('fs');
+          const logText = `\n\n=== [${new Date().toISOString()}] 成功生成 (長度: ${finalResponse.length}) ===\n${finalResponse}\n======================================================\n`;
+          fs.appendFileSync('C:\\ais2api\\ai_output_debug.log', logText);
+      } catch (logErr) {
+          this.logger.error("[UI Auto] 寫入 debug log 失敗: " + logErr.message);
+      }
+      
+      this.logger.info("[UI Auto] 偵測到當前輸入框字數: " + finalResponse.length);
       return finalResponse;
     } catch (e) {
       if ((e.message.includes("closed") || e.message.includes("Protocol error")) && retryCount < 1) {
