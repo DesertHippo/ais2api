@@ -1100,10 +1100,18 @@ class BrowserManager {
                 unchangedCount++;
                 
                 const isFlash = targetModelName.includes('flash');
-                const maxUnchanged = isGenerating ? (isFlash ? 100 : 360) : 6;
+                // 延長卡死判定時間：如果是 Flash 模型且正在生成，允許卡住高達 360 次 (約 180 秒)，避免超長 JSON 被強制截斷
+                const maxUnchanged = isGenerating ? (isFlash ? 360 : 600) : 6;
                 if (unchangedCount >= maxUnchanged) {
                   clearInterval(check);
-                  resolve(text);
+                  if (isGenerating) {
+                      // 真正的原因：網頁介面當機卡死了（一直顯示正在生成，但字數不再增加）。
+                      // 我們不應該把這半截爛尾樓回傳，這會導致使用者的前端 JSON 解析崩潰！
+                      // 應該直接丟出錯誤，讓系統自動切換帳號或重試！
+                      resolve("__UI_AUTO_GENERIC_ERROR__");
+                  } else {
+                      resolve(text);
+                  }
                 }
               } else {
                 lastLength = text.length;
