@@ -1,4 +1,4 @@
-const session = require("express-session");
+﻿const session = require("express-session");
 const cookieParser = require("cookie-parser");
 const crypto = require("crypto");
 const express = require("express");
@@ -24,20 +24,20 @@ class AuthSource {
     if (process.env.AUTH_JSON_1) {
       this.authMode = "env";
       this.logger.info(
-        "[Auth] 检测到 AUTH_JSON_1 环境变量，切换到环境变量认证模式。",
+        "[Auth] 璉�瘚见� AUTH_JSON_1 ?臬??㗛?嚗�??Ｗ�?臬??㗛?霈方?璅∪???,
       );
     } else {
       this.logger.info(
-        '[Auth] 未检测到环境变量认证，将使用 "auth/" 目录下的文件。',
+        '[Auth] ?芣?瘚见�?臬??㗛?霈方?嚗�?雿輻鍂 "auth/" ?桀?銝讠??�辣??,
       );
     }
 
-    this._discoverAvailableIndices(); // 初步发现所有存在的源
-    this._preValidateAndFilter(); // 预检验并过滤掉格式错误的源
+    this._discoverAvailableIndices(); // ?脲郊?𤑳緵?�?匧??函?皞?
+    this._preValidateAndFilter(); // 憸�?撉�僎餈�誘?㗇聢撘誯?霂舐?皞?
 
     if (this.availableIndices.length === 0) {
       this.logger.error(
-        `[Auth] 致命错误：在 '${this.authMode}' 模式下未找到任何有效的认证源。`,
+        `[Auth] ?游𦶢?躰秤嚗𡁜銁 '${this.authMode}' 璅∪?銝𧢲𧊋?曉�隞颱??㗇??�恕霂�??�,
       );
       throw new Error("No valid authentication sources found.");
     }
@@ -47,7 +47,7 @@ class AuthSource {
     let indices = [];
     if (this.authMode === "env") {
       const regex = /^AUTH_JSON_(\d+)$/;
-      // [关键修复] 完整的 for...in 循环，用于扫描所有环境变量
+      // [?喲睸靽桀?] 摰峕㟲??for...in 敺芰㴓嚗𣬚鍂鈭擧醌?𤩺??厩㴓憓�???
       for (const key in process.env) {
         const match = key.match(regex);
         if (match && match[1]) {
@@ -58,7 +58,7 @@ class AuthSource {
       // 'file' mode
       const authDir = path.join(__dirname, "auth");
       if (!fs.existsSync(authDir)) {
-        this.logger.warn('[Auth] "auth/" 目录不存在。');
+        this.logger.warn('[Auth] "auth/" ?桀?銝滚??具�?);
         this.availableIndices = [];
         return;
       }
@@ -69,32 +69,32 @@ class AuthSource {
           parseInt(file.match(/^auth-(\d+)\.json$/)[1], 10),
         );
       } catch (error) {
-        this.logger.error(`[Auth] 扫描 "auth/" 目录失败: ${error.message}`);
+        this.logger.error(`[Auth] ?急? "auth/" ?桀?憭梯揖: ${error.message}`);
         this.availableIndices = [];
         return;
       }
     }
 
-    // 存取扫描到的原始索引
+    // 摮睃??急??啁??笔?蝝Ｗ?
     this.initialIndices = [...new Set(indices)].sort((a, b) => a - b);
-    this.availableIndices = [...this.initialIndices]; // 先假设都可用
+    this.availableIndices = [...this.initialIndices]; // ?�?霈暸�?舐鍂
 
     this.logger.info(
-      `[Auth] 在 '${this.authMode}' 模式下，初步发现 ${
+      `[Auth] ??'${this.authMode}' 璅∪?銝页??脲郊?𤑳緵 ${
         this.initialIndices.length
-      } 个认证源: [${this.initialIndices.join(", ")}]`,
+      } 銝芾恕霂�?: [${this.initialIndices.join(", ")}]`,
     );
   }
 
   _preValidateAndFilter() {
     if (this.availableIndices.length === 0) return;
 
-    this.logger.info("[Auth] 开始预检验所有认证源的JSON格式...");
+    this.logger.info("[Auth] 撘�憪钅?璉�撉峕??㕑恕霂�??�SON?澆?...");
     const validIndices = [];
     const invalidSourceDescriptions = [];
 
     for (const index of this.availableIndices) {
-      // 注意：这里我们调用一个内部的、简化的 getAuthContent
+      // 瘜冽?嚗朞??峕?隞祈??其?銝芸??函??�??𣇉? getAuthContent
       const authContent = this._getAuthContent(index);
       if (authContent) {
         try {
@@ -102,30 +102,30 @@ class AuthSource {
           validIndices.push(index);
           this.accountNameMap.set(
             index,
-            authData.accountName || "N/A (未命名)",
+            authData.accountName || "N/A (?芸𦶢??",
           );
         } catch (e) {
           invalidSourceDescriptions.push(`auth-${index}`);
         }
       } else {
-        invalidSourceDescriptions.push(`auth-${index} (无法读取)`);
+        invalidSourceDescriptions.push(`auth-${index} (?䭾?霂餃?)`);
       }
     }
 
     if (invalidSourceDescriptions.length > 0) {
       this.logger.warn(
-        `⚠️ [Auth] 预检验发现 ${
+        `?𩤃? [Auth] 憸�?撉�???${
           invalidSourceDescriptions.length
-        } 个格式错误或无法读取的认证源: [${invalidSourceDescriptions.join(
+        } 銝芣聢撘誯?霂舀??䭾?霂餃??�恕霂�?: [${invalidSourceDescriptions.join(
           ", ",
-        )}]，将从可用列表中移除。`,
+        )}]嚗�?隞𤾸虾?典?銵其葉蝘駁膄?�,
       );
     }
 
     this.availableIndices = validIndices;
   }
 
-  // 一个内部辅助函数，仅用于预检验，避免日志污染
+  // 銝�銝芸??刻??拙遆?堆?隞�鍂鈭𡡞?璉�撉䕘??踹??亙?瘙⊥?
   _getAuthContent(index) {
     if (this.authMode === "env") {
       return process.env[`AUTH_JSON_${index}`];
@@ -142,13 +142,13 @@ class AuthSource {
 
   getAuth(index) {
     if (!this.availableIndices.includes(index)) {
-      this.logger.error(`[Auth] 请求了无效或不存在的认证索引: ${index}`);
+      this.logger.error(`[Auth] 霂瑟?鈭�??�?銝滚??函?霈方?蝝Ｗ?: ${index}`);
       return null;
     }
 
     let jsonString = this._getAuthContent(index);
     if (!jsonString) {
-      this.logger.error(`[Auth] 在读取时无法获取认证源 #${index} 的内容。`);
+      this.logger.error(`[Auth] ?刻粉?𡝗𧒄?䭾??瑕?霈方?皞?#${index} ?�?摰嫘��);
       return null;
     }
 
@@ -156,7 +156,7 @@ class AuthSource {
       return JSON.parse(jsonString);
     } catch (e) {
       this.logger.error(
-        `[Auth] 解析来自认证源 #${index} 的JSON内容失败: ${e.message}`,
+        `[Auth] 閫???亥䌊霈方?皞?#${index} ?�SON?�捆憭梯揖: ${e.message}`,
       );
       return null;
     }
@@ -183,9 +183,9 @@ class BrowserManager {
     this.uiWaitQueueCount = 0;
 
     this.launchArgs = [
-      "--disable-dev-shm-usage", // 关键！防止 /dev/shm 空间不足导致浏览器崩溃
+      "--disable-dev-shm-usage", // ?喲睸嚗�俈甇?/dev/shm 蝛粹𡢿銝滩雲撖潸稲瘚讛??典援皞?
       "--disable-gpu",
-      "--no-sandbox", // 在受限的容器环境中通常需要
+      "--no-sandbox", // ?典??鞟?摰孵膥?臬?銝剝�𡁜虜?�閬?
       "--disable-setuid-sandbox",
       "--disable-infobars",
       "--disable-background-networking",
@@ -220,7 +220,7 @@ class BrowserManager {
   notifyUserActivity() {
     if (this.noButtonCount > 0) {
       this.logger.info(
-        "[Browser] ⚡ 收到用户请求信号，强制唤醒后台检测 (重置计数器)",
+        "[Browser] ???嗅�?冽�霂瑟?靽∪噡嚗�撩?嗅𤧅?鍦??唳?瘚?(?滨蔭霈⊥㺭??",
       );
       this.noButtonCount = 0;
     }
@@ -228,11 +228,11 @@ class BrowserManager {
 
   async launchOrSwitchContext(authIndex) {
     if (this.context) {
-      this.logger.info("[Browser] 正在关闭旧的浏览器上下文...");
+      this.logger.info("[Browser] 甇?銁?喲𡡒?抒?瘚讛??其?銝𧢲?...");
       try {
-        try { await this.context.close(); } catch (e) { this.logger.warn('[Browser] 关闭旧上下文时发生错误: ' + e.message); try { if (this.browser) await this.browser.close(); } catch (be) {} this.browser = null; }
+        try { await this.context.close(); } catch (e) { this.logger.warn('[Browser] ?喲𡡒?找?銝𧢲??嗅??罸?霂? ' + e.message); try { if (this.browser) await this.browser.close(); } catch (be) {} this.browser = null; }
       } catch (e) {
-        this.logger.warn("[Browser] 关闭旧上下文时发生错误 (可能已崩溃): " + e.message);
+        this.logger.warn("[Browser] ?喲𡡒?找?銝𧢲??嗅??罸?霂?(?航�撌脣援皞?: " + e.message);
         try {
             if (this.browser) await this.browser.close();
         } catch (be) {}
@@ -240,11 +240,11 @@ class BrowserManager {
       }
       this.context = null;
       this.page = null;
-      this.logger.info("[Browser] 旧上下文已清理。");
+      this.logger.info("[Browser] ?找?銝𧢲?撌脫??��?);
     }
 
     if (!this.browser) {
-      this.logger.info("🚀 [Browser] 浏览器实例未运行，正在进行首次启动...");
+      this.logger.info("?? [Browser] 瘚讛??典?靘𧢲𧊋餈鞱?嚗峕迤?刻?銵屸?甈∪鍳??..");
       if (!fs.existsSync(this.browserExecutablePath)) {
         throw new Error(
           `Browser executable not found at path: ${this.browserExecutablePath}`,
@@ -256,22 +256,22 @@ class BrowserManager {
         args: this.launchArgs,
       });
       this.browser.on("disconnected", () => {
-        this.logger.error("❌ [Browser] 浏览器意外断开连接！");
+        this.logger.error("??[Browser] 瘚讛??冽?憭𡝗鱏撘�餈墧𦻖嚗?);
         this.browser = null;
         this.context = null;
         this.page = null;
       });
-      this.logger.info("✅ [Browser] 浏览器实例已成功启动。");
+      this.logger.info("??[Browser] 瘚讛??典?靘见歇?𣂼??臬𢆡??);
     }
     const sourceDescription =
       this.authSource.authMode === "env"
-        ? `环境变量 AUTH_JSON_${authIndex}`
-        : `文件 auth-${authIndex}.json`;
+        ? `?臬??㗛? AUTH_JSON_${authIndex}`
+        : `?�辣 auth-${authIndex}.json`;
     this.logger.info("==================================================");
     this.logger.info(
-      `🔄 [Browser] 正在为账号 #${authIndex} 创建新的浏览器上下文`,
+      `?? [Browser] 甇?銁銝箄揭??#${authIndex} ?𥕦遣?啁?瘚讛??其?銝𧢲?`,
     );
-    this.logger.info(`   • 认证源: ${sourceDescription}`);
+    this.logger.info(`   ??霈方?皞? ${sourceDescription}`);
     this.logger.info("==================================================");
 
     const storageStateObject = this.authSource.getAuth(authIndex);
@@ -305,48 +305,48 @@ class BrowserManager {
         }
       });
 
-      // 增加 1：监听页面崩溃
+      // 憓𧼮? 1嚗𡁶??祇△?Ｗ援皞?
       this.page.on("crash", () => {
         this.logger.error(
-          `🚨 [Browser] 致命：页面进程崩溃 (Crash)！当前账号索引: ${authIndex}`,
+          `?辶 [Browser] ?游𦶢嚗𡁻△?Ｚ?蝔见援皞?(Crash)嚗�??滩揭?瑞揣撘? ${authIndex}`,
         );
       });
 
-      // 增加 2：监听意外的页面跳转或刷新
+      // 憓𧼮? 2嚗𡁶??祆?憭𣇉?憿菟𢒰頝唾蓮?硋�??
       this.page.on("framenavigated", (frame) => {
-        // 只关注主框架的跳转
+        // ?芸�瘜其蜓獢�沲?�歲頧?
         if (this.page && frame === this.page.mainFrame()) {
           const newUrl = frame.url();
           if (
             newUrl !== "about:blank" &&
             !newUrl.includes(this.config.targetUrl)
           ) {
-            this.logger.warn(`⚠️ [Browser] 頁面發生了跳轉/重新整理！新 URL: ${newUrl}`);
+            this.logger.warn(`?𩤃? [Browser] ?�𢒰?潛?鈭�歲頧??齿鰵?渡?嚗�鰵 URL: ${newUrl}`);
           }
         }
       });
 
-      // 增加 3：监听 WebSocket 级别的错误 (方便对照)
+      // 憓𧼮? 3嚗𡁶???WebSocket 蝥批�?�?霂?(?嫣噶撖寧�)
       this.page.on("websocket", (ws) => {
         ws.on("close", () =>
           this.logger.info(
-            `[Browser Network] 页面内的 WebSocket 连接已关闭: ${ws.url()}`,
+            `[Browser Network] 憿菟𢒰?�? WebSocket 餈墧𦻖撌脣�?? ${ws.url()}`,
           ),
         );
         ws.on("error", (err) =>
           this.logger.error(
-            `[Browser Network] 页面内的 WebSocket 发生错误: ${err}`,
+            `[Browser Network] 憿菟𢒰?�? WebSocket ?𤑳??躰秤: ${err}`,
           ),
         );
       });
 
-      this.logger.info(`[Browser] 正在导航至目标网页...`);
+      this.logger.info(`[Browser] 甇?銁撖潸⏛?喟𤌍?�?憿?..`);
       const targetUrl = this.config.targetUrl;
       await this.page.goto(targetUrl, {
         timeout: 180000,
         waitUntil: "domcontentloaded",
       });
-      this.logger.info("[Browser] 页面加载完成。");
+      this.logger.info("[Browser] 憿菟𢒰?㰘蝸摰峕???);
 
       await this.page.waitForTimeout(3000);
 
@@ -355,57 +355,57 @@ class BrowserManager {
       try {
         pageTitle = await this.page.title();
       } catch (e) {
-        this.logger.warn(`[Browser] 无法获取页面标题: ${e.message}`);
+        this.logger.warn(`[Browser] ?䭾??瑕?憿菟𢒰?�?: ${e.message}`);
       }
 
-      this.logger.info(`[Browser] [诊断] URL: ${currentUrl}`);
-      this.logger.info(`[Browser] [诊断] Title: "${pageTitle}"`);
+      this.logger.info(`[Browser] [霂𦠜鱏] URL: ${currentUrl}`);
+      this.logger.info(`[Browser] [霂𦠜鱏] Title: "${pageTitle}"`);
 
-      // 1. 检查 Cookie 是否失效 (跳转回登录页)
+      // 1. 璉�??Cookie ?臬炏憭望? (頝唾蓮?䂿蒈敶閖△)
       if (
         currentUrl.includes("accounts.google.com") ||
         currentUrl.includes("ServiceLogin") ||
         pageTitle.includes("Sign in") ||
-        pageTitle.includes("登录")
+        pageTitle.includes("?餃?")
       ) {
         throw new Error(
-          "🚨 Cookie 已失效/过期！浏览器被重定向到了 Google 登录页面。请重新提取 storageState。",
+          "?辶 Cookie 撌脣仃??餈�?嚗�?閫�膥鋡恍?摰𡁜??唬? Google ?餃?憿菟𢒰?�窈?齿鰵?𣂼? storageState??,
         );
       }
 
-      // 2. 检查 IP 地区限制 (Region Unsupported)
-      // 通常标题是 "Google AI Studio is not available in your location"
+      // 2. 璉�??IP ?啣躹?𣂼� (Region Unsupported)
+      // ?𡁜虜?�???"Google AI Studio is not available in your location"
       if (
         pageTitle.includes("Available regions") ||
         pageTitle.includes("not available")
       ) {
         throw new Error(
-          "🚨 当前 IP 不支持访问 Google AI Studio。请更换节点后重启！",
+          "?辶 敶枏? IP 銝齿𣈲?�挪??Google AI Studio?�窈?湔揢?��?𡡞??荔?",
         );
       }
 
-      // 3. 检查 IP 风控 (403 Forbidden)
+      // 3. 璉�??IP 憌擧綉 (403 Forbidden)
       if (pageTitle.includes("403") || pageTitle.includes("Forbidden")) {
         throw new Error(
-          "🚨 403 Forbidden：当前 IP 信誉过低，被 Google 风控拒绝访问。",
+          "?辶 403 Forbidden嚗𡁜???IP 靽∟?餈�?嚗諹◤ Google 憌擧綉?垍?霈輸䔮??,
         );
       }
 
-      // 4. 检查白屏 (网络极差或加载失败)
+      // 4. 璉�?亦蒾撅?(蝵𤑳??�榆?硋?頧賢仃韐?
       if (currentUrl === "about:blank") {
         throw new Error(
-          "🚨 页面加载失败 (about:blank)，可能是网络连接超时或浏览器崩溃。",
+          "?辶 憿菟𢒰?㰘蝸憭梯揖 (about:blank)嚗�虾?賣糓蝵𤑳?餈墧𦻖頞�𧒄?𡝗?閫�膥撏拇???,
         );
       }
 
       this.logger.info(
-        `[Browser] 进入 20秒 检查流程 (目标: Cookie + Got it + 新手引导)...`,
+        `[Browser] 餈𥕦� 20蝘?璉�?交?蝔?(?格?: Cookie + Got it + ?唳?撘訫紡)...`,
       );
 
       const startTime = Date.now();
       const timeLimit = 20000;
 
-      // 状态记录表
+      // ?嗆��扇敶閗”
       const popupStatus = {
         cookie: false,
         gotIt: false,
@@ -414,30 +414,30 @@ class BrowserManager {
       };
 
       while (Date.now() - startTime < timeLimit) {
-        // 如果3个都处理过了，立刻退出 ---
+        // 憒�?3銝芷�憭�?餈�?嚗𣬚??駁��??---
         if (popupStatus.cookie && popupStatus.gotIt && popupStatus.guide) {
           this.logger.info(
-            `[Browser] ⚡ 完美！3个弹窗全部处理完毕，提前进入下一步。`,
+            `[Browser] ??摰𣬚?嚗?銝芸撕蝒堒�?典??�?瘥𤏪??𣂼?餈𥕦�銝衤?甇乓��,
           );
           break;
         }
 
         let clickedInThisLoop = false;
 
-        // 1. 检查 Cookie "Agree" (如果还没点过)
+        // 1. 璉�??Cookie "Agree" (憒�?餈䀹瓷?寡?)
         if (!popupStatus.cookie) {
           try {
             const agreeBtn = this.page.locator('button:text("Agree")').first();
             if (await agreeBtn.isVisible({ timeout: 100 })) {
               await agreeBtn.click({ force: true });
-              this.logger.info(`[Browser] ✅ (1/3) 点击了 "Cookie Agree"`);
+              this.logger.info(`[Browser] ??(1/3) ?孵稬鈭?"Cookie Agree"`);
               popupStatus.cookie = true;
               clickedInThisLoop = true;
             }
           } catch (e) {}
         }
 
-        // 2. 检查 "Got it" (如果还没点过)
+        // 2. 璉�??"Got it" (憒�?餈䀹瓷?寡?)
         if (!popupStatus.gotIt) {
           try {
             const gotItBtn = this.page
@@ -445,14 +445,14 @@ class BrowserManager {
               .first();
             if (await gotItBtn.isVisible({ timeout: 100 })) {
               await gotItBtn.click({ force: true });
-              this.logger.info(`[Browser] ✅ (2/3) 点击了 "Got it" 弹窗`);
+              this.logger.info(`[Browser] ??(2/3) ?孵稬鈭?"Got it" 撘寧?`);
               popupStatus.gotIt = true;
               clickedInThisLoop = true;
             }
           } catch (e) {}
         }
 
-        // 3. 检查 新手引导 "Close" (如果还没点过)
+        // 3. 璉�???唳?撘訫紡 "Close" (憒�?餈䀹瓷?寡?)
         if (!popupStatus.guide) {
           try {
             const closeBtn = this.page
@@ -460,7 +460,7 @@ class BrowserManager {
               .first();
             if (await closeBtn.isVisible({ timeout: 100 })) {
               await closeBtn.click({ force: true });
-              this.logger.info(`[Browser] ✅ (3/3) 点击了 "新手引导关闭" 按钮`);
+              this.logger.info(`[Browser] ??(3/3) ?孵稬鈭?"?唳?撘訫紡?喲𡡒" ?厰僼`);
               popupStatus.guide = true;
               clickedInThisLoop = true;
             }
@@ -484,12 +484,12 @@ class BrowserManager {
 
             if (clicked) {
               this.logger.info(
-                `[Browser] ✅ (4/4) 原生JS成功点击 "Continue to the app"`,
+                `[Browser] ??(4/4) ?毺?JS?𣂼??孵稬 "Continue to the app"`,
               );
               popupStatus.continueBtn = true;
               clickedInThisLoop = true;
               this.logger.info(
-                `[Browser] ⚡ 已确认进入应用，提前终止弹窗等待循环。`,
+                `[Browser] ??撌脩＆霈方??亙??剁??𣂼?蝏�迫撘寧?蝑匧?敺芰㴓?�,
               );
               break;
             }
@@ -497,25 +497,25 @@ class BrowserManager {
         }
         try {
           const isAppRunning = await this.page.evaluate(() => {
-            // 只要页面里出现了 ProxyClient 的输出，就说明代码已经跑起来了
+            // ?芾?憿菟𢒰?�枂?唬? ProxyClient ?�??綽?撠梯秩?𦒘誨?�歇蝏讛?韏瑟䔉鈭?
             return document.body.innerText.includes("[ProxyClient]");
           });
           if (isAppRunning) {
             this.logger.info(
-              `[Browser] ⚡ 检测到内部环境已就绪，跳出弹窗等待。`,
+              `[Browser] ??璉�瘚见�?��?臬?撌脣停蝏迎?頝喳枂撘寧?蝑匧??�,
             );
             break;
           }
         } catch (e) {}
 
-        // 如果本轮点击了按钮，稍微等一下动画；如果没点，等待1秒避免死循环空转
+        // 憒�??祈蔭?孵稬鈭�??殷?蝔滚凝蝑劐?銝见𢆡?鳴?憒�?瘝∠�嚗𣬚?敺?蝘㘾�?齿香敺芰㴓蝛箄蓮
         await this.page.waitForTimeout(clickedInThisLoop ? 500 : 1000);
       }
 
       this.logger.info(
-        `[Browser] 弹窗检查结束 (耗时: ${Math.round(
+        `[Browser] 撘寧?璉�?亦???(?埈𧒄: ${Math.round(
           (Date.now() - startTime) / 1000,
-        )}s)，结果: ` +
+        )}s)嚗𣬚??? ` +
           `Cookie[${popupStatus.cookie ? "Ok" : "No"}], ` +
           `GotIt[${popupStatus.gotIt ? "Ok" : "No"}], ` +
           `Guide[${popupStatus.guide ? "Ok" : "No"}]`,
@@ -523,10 +523,10 @@ class BrowserManager {
 
       this.currentAuthIndex = authIndex;
       this._startBackgroundWakeup();
-      this.logger.info("[Browser] (后台任务) 🛡️ 监控进程已启动...");
+      this.logger.info("[Browser] (?𤾸蝱隞餃𦛚) ?椘儭??烐綉餈𤤿?撌脣鍳??..");
       await this.page.waitForTimeout(1000);
       this.logger.info(
-        "[Browser] ⚡ 正在发送主动唤醒请求以触发 Launch 流程...",
+        "[Browser] ??甇?銁?煾��蜓?典𤧅?坿窈瘙�誑閫血? Launch 瘚�?...",
       );
       try {
         await this.page.evaluate(async () => {
@@ -540,24 +540,24 @@ class BrowserManager {
             );
           } catch (e) {
             console.log(
-              "[ProxyClient] 主动唤醒请求已发送 (预期内可能会失败，这很正常)",
+              "[ProxyClient] 銝餃𢆡?日?霂瑟?撌脣???(憸�??�虾?賭?憭梯揖嚗諹?敺�迤撣?",
             );
           }
         });
-        this.logger.info("[Browser] ⚡ 主动唤醒请求已发送。");
+        this.logger.info("[Browser] ??銝餃𢆡?日?霂瑟?撌脣??��?);
       } catch (e) {
         this.logger.warn(
-          `[Browser] 主动唤醒请求发送异常 (不影响主流程): ${e.message}`,
+          `[Browser] 銝餃𢆡?日?霂瑟??煾��?撣?(銝滚蔣?滢蜓瘚�?): ${e.message}`,
         );
       }
 
       this.logger.info("==================================================");
-      this.logger.info(`✅ [Browser] 账号 ${authIndex} 的上下文初始化成功！`);
-      this.logger.info("✅ [Browser] 浏览器客户端已准备就绪。");
+      this.logger.info(`??[Browser] 韐血噡 ${authIndex} ?�?銝𧢲??嘥??𡝗??�?`);
+      this.logger.info("??[Browser] 瘚讛??典恥?瑞垢撌脣?憭�停蝏芥�?);
       this.logger.info("==================================================");
     } catch (error) {
       this.logger.error(
-        `❌ [Browser] 账户 ${authIndex} 的上下文初始化失败: ${error.message}`,
+        `??[Browser] 韐行� ${authIndex} ?�?銝𧢲??嘥??硋仃韐? ${error.message}`,
       );
       if (this.browser) {
         await this.browser.close();
@@ -569,29 +569,29 @@ class BrowserManager {
 
   async closeBrowser() {
     if (this.browser) {
-      this.logger.info("[Browser] 正在关闭整个浏览器实例...");
+      this.logger.info("[Browser] 甇?銁?喲𡡒?港葵瘚讛??典?靘?..");
       await this.browser.close();
       this.browser = null;
       this.context = null;
       this.page = null;
-      this.logger.info("[Browser] 浏览器实例已关闭。");
+      this.logger.info("[Browser] 瘚讛??典?靘见歇?喲𡡒??);
     }
   }
 
   async switchAccount(newAuthIndex) {
     this.logger.info(
-      `🔄 [Browser] 开始账号切换: 从 ${this.currentAuthIndex} 到 ${newAuthIndex}`,
+      `?? [Browser] 撘�憪贝揭?瑕??? 隞?${this.currentAuthIndex} ??${newAuthIndex}`,
     );
     await this.launchOrSwitchContext(newAuthIndex);
     this.logger.info(
-      `✅ [Browser] 账号切换完成，当前账号: ${this.currentAuthIndex}`,
+      `??[Browser] 韐血噡?�揢摰峕?嚗�??滩揭?? ${this.currentAuthIndex}`,
     );
   }
 
   async _startBackgroundWakeup() {
     if (this.isWakeupRunning) {
       this.logger.warn(
-        "[Browser] (后台任务) 保活监控已在运行，忽略重复启动请求。",
+        "[Browser] (?𤾸蝱隞餃𦛚) 靽脲暑?烐綉撌脣銁餈鞱?嚗�蕭?仿?憭滚鍳?刻窈瘙��?,
       );
       return;
     }
@@ -605,7 +605,7 @@ class BrowserManager {
       return;
     }
 
-    this.logger.info("[Browser] (后台任务) 🛡️ 网页保活监控已启动");
+    this.logger.info("[Browser] (?𤾸蝱隞餃𦛚) ?椘儭?蝵煾△靽脲暑?烐綉撌脣鍳??);
 
     while (
       currentPage &&
@@ -613,17 +613,17 @@ class BrowserManager {
       this.page === currentPage
     ) {
       try {
-        // --- [增强步骤 1] 强制唤醒页面 (解决不发请求不刷新的问题) ---
+        // --- [憓𧼮撩甇仿炊 1] 撘箏�?日?憿菟𢒰 (閫?�銝滚?霂瑟?銝滚�?啁??桅?) ---
         await currentPage.bringToFront().catch(() => {});
 
-        // 关键：在无头模式下，仅仅 bringToFront 可能不够，需要伪造鼠标移动来触发渲染帧
-        // 随机在一个无害区域轻微晃动鼠标
+        // ?喲睸嚗𡁜銁?惩仍璅∪?銝页?隞�? bringToFront ?航�銝滚?嚗屸?閬�憚?𣳇??�宏?冽䔉閫血?皜脫?撣?
+        // ?𤩺㦤?其?銝芣?摰喳躹?蠘蝠敺格??券???
         await currentPage.mouse.move(10, 10);
         await currentPage.mouse.move(20, 20);
 
-        // --- [增强步骤 2] 智能查找 (查找文本并向上锁定可交互父级) ---
+        // --- [憓𧼮撩甇仿炊 2] ?箄�?交𪄳 (?交𪄳?�𧋦撟嗅?銝𢠃?摰𡁜虾鈭支??嗥漣) ---
         const targetInfo = await currentPage.evaluate(() => {
-          // 1. 直接CSS定位
+          // 1. ?湔𦻖CSS摰帋?
           try {
             const preciseCandidates = Array.from(
               document.querySelectorAll(
@@ -641,17 +641,17 @@ class BrowserManager {
                     y: rect.top + rect.height / 2,
                     tagName: el.tagName,
                     text: text.substring(0, 15),
-                    strategy: "precise_css", // 标记：这是通过精准CSS找到的
+                    strategy: "precise_css", // ?�扇嚗朞??舫�朞?蝎曉?CSS?曉�??
                   };
                 }
               }
             }
           } catch (e) {}
-          // 2. 扫描Y轴400-800范围刻意元素
+          // 2. ?急?Y頧?00-800?�凒?餅??�?
           const MIN_Y = 400;
           const MAX_Y = 800;
 
-          // 辅助函数：判断元素是否可见且在区域内
+          // 颲�𨭌?賣㺭嚗𡁜ế?剖?蝝䭾糓?血虾閫�??典躹?笔?
           const isValid = (rect) => {
             return (
               rect.width > 0 &&
@@ -661,20 +661,20 @@ class BrowserManager {
             );
           };
 
-          // 扫描所有包含关键词的元素
+          // ?急??�?匧??怠�?株??�?蝝?
           const candidates = Array.from(
             document.querySelectorAll("button, span, div, a, i"),
           );
 
           for (const el of candidates) {
             const text = (el.innerText || "").trim();
-            // 匹配 Launch 或 rocket_launch 图标名
+            // ?寥? Launch ??rocket_launch ?暹???
             if (!/Launch|rocket_launch/i.test(text)) continue;
 
             let targetEl = el;
             let rect = targetEl.getBoundingClientRect();
 
-            // [关键优化] 如果当前元素很小或是纯文本容器，尝试向上找 3 层父级
+            // [?喲睸隡睃?] 憒�?敶枏??�?敺�??𡝗糓蝥舀??砍捆?剁?撠肽??睲???3 撅��蝥?
             let parentDepth = 0;
             while (parentDepth < 3 && targetEl.parentElement) {
               if (
@@ -692,7 +692,7 @@ class BrowserManager {
               parentDepth++;
             }
 
-            // 最终检查
+            // ?�蝏�???
             if (isValid(rect)) {
               return {
                 found: true,
@@ -700,47 +700,47 @@ class BrowserManager {
                 y: rect.top + rect.height / 2,
                 tagName: targetEl.tagName,
                 text: text.substring(0, 15),
-                strategy: "fuzzy_scan", // 标记：这是通过模糊扫描找到的
+                strategy: "fuzzy_scan", // ?�扇嚗朞??舫�朞?璅∠??急??曉�??
               };
             }
           }
           return { found: false };
         });
 
-        // --- [增强步骤 3] 执行操作 ---
+        // --- [憓𧼮撩甇仿炊 3] ?扯??滢? ---
         if (targetInfo.found) {
           this.noButtonCount = 0;
           this.logger.info(
-            `[Browser] 🎯 锁定目标 [${targetInfo.tagName}] (策略: ${
-              targetInfo.strategy === "precise_css" ? "精准定位" : "模糊扫描"
+            `[Browser] ?㴓 ?�??格? [${targetInfo.tagName}] (蝑𣇉裦: ${
+              targetInfo.strategy === "precise_css" ? "蝎曉?摰帋?" : "璅∠??急?"
             })...`,
           );
 
-          // === 策略 A: 物理点击 (模拟真实鼠标) ===
-          // 1. 移动过去
+          // === 蝑𣇉裦 A: ?拍??孵稬 (璅⊥??笔?曌䭾?) ===
+          // 1. 蝘餃𢆡餈�縧
           await currentPage.mouse.move(targetInfo.x, targetInfo.y, {
             steps: 5,
           });
-          // 2. 悬停 (给 hover 样式一点反应时间)
+          // 2. ?砍? (蝏?hover ?瑕?銝�?孵?摨娍𧒄??
           await new Promise((r) => setTimeout(r, 300));
-          // 3. 按下
+          // 3. ?劐?
           await currentPage.mouse.down();
-          // 4. 长按 (某些按钮防误触，需要按住一小会儿)
+          // 4. ?踵? (?𣂷??厰僼?脰秤閫佗??�閬�?雿譍?撠譍???
           await new Promise((r) => setTimeout(r, 400));
-          // 5. 抬起
+          // 5. ?祈絲
           await currentPage.mouse.up();
 
-          this.logger.info(`[Browser] 🖱️ 物理点击已执行，验证结果...`);
-          // 等待 1.5 秒看效果
+          this.logger.info(`[Browser] ?鰐儭??拍??孵稬撌脫�銵䕘?撉諹?蝏𤘪?...`);
+          // 蝑匧? 1.5 蝘垍??�?
           await new Promise((r) => setTimeout(r, 1500));
 
-          // === 策略 B: JS 补刀 (如果物理点击失败) ===
-          // 再次检查按钮是否还在原地
+          // === 蝑𣇉裦 B: JS 銵亙? (憒�??拍??孵稬憭梯揖) ===
+          // ?齿活璉�?交??格糓?西??典???
           const isStillThere = await currentPage.evaluate(() => {
-            // 逻辑同上，简单检查
+            // ?餉??䔶?嚗𣬚??閙???
             const allText = document.body.innerText;
-            // 简单粗暴检查页面可视区是否还有那个特定位置的文字
-            // 这里为了性能做简化：再次扫描元素
+            // 蝞�?閧??湔??仿△?Ｗ虾閫�躹?臬炏餈䀹???葵?孵?雿滨蔭?�?摮?
+            // 餈䠷?銝箔??扯�?𡁶??吔??齿活?急??�?
             const els = Array.from(
               document.querySelectorAll('button, span, div[role="button"]'),
             );
@@ -757,10 +757,10 @@ class BrowserManager {
 
           if (isStillThere) {
             this.logger.warn(
-              `[Browser] ⚠️ 物理点击似乎无效（按钮仍在），尝试 JS 强力点击...`,
+              `[Browser] ?𩤃? ?拍??孵稬隡潔??䭾?嚗�??桐??剁?嚗�?霂?JS 撘箏??孵稬...`,
             );
 
-            // 直接在浏览器内部触发 click 事件
+            // ?湔𦻖?冽?閫�膥?��閫血? click 鈭衤辣
             await currentPage.evaluate(() => {
               const MIN_Y = 400;
               const MAX_Y = 800;
@@ -774,11 +774,11 @@ class BrowserManager {
                   r.top > MIN_Y &&
                   r.top < MAX_Y
                 ) {
-                  // 尝试找到最近的 button 父级点击
+                  // 撠肽??曉�?�餈𤑳? button ?嗥漣?孵稬
                   let target = el;
                   if (target.closest("button"))
                     target = target.closest("button");
-                  target.click(); // 原生 JS 点击
+                  target.click(); // ?毺? JS ?孵稬
                   console.log(
                     "[ProxyClient] JS Click triggered on " + target.tagName,
                   );
@@ -788,13 +788,13 @@ class BrowserManager {
             });
             await new Promise((r) => setTimeout(r, 2000));
           } else {
-            this.logger.info(`[Browser] ✅ 物理点击成功，按钮已消失。`);
+            this.logger.info(`[Browser] ???拍??孵稬?𣂼?嚗峕??桀歇瘨�仃?�);
             await new Promise((r) => setTimeout(r, 60000));
             this.noButtonCount = 21;
           }
         } else {
           this.noButtonCount++;
-          // 5. [关键] 智能休眠逻辑 (支持被唤醒)
+          // 5. [?喲睸] ?箄�隡𤑳??餉? (?舀?鋡怠𤧅??
           if (this.noButtonCount > 20) {
             for (let i = 0; i < 30; i++) {
               if (this.noButtonCount === 0) {
@@ -830,7 +830,7 @@ class BrowserManager {
   async generateTextViaUI(promptText, modelName, systemInstructions = "", maxWaitMs = 300000, signal = null) {
     this.uiWaitQueueCount++;
     if (this.uiWaitQueueCount > 1) {
-      this.logger.info(`[UI Auto] 撟嗅?霂瑟??㘾?銝?.. (?㘾??? ${this.uiWaitQueueCount - 1})`);
+      this.logger.info(`[UI Auto] ?笔???�???????.. (????? ${this.uiWaitQueueCount - 1})`);
     }
     
     let unlock;
@@ -845,7 +845,7 @@ class BrowserManager {
   }
 
   async _generateTextViaUIInternal(promptText, modelName, systemInstructions = "", maxWaitMs = 300000, retryCount = 0) {
-    this.logger.info("[UI Auto] 開始進行 UI 自動化處理請求...");
+    this.logger.info("[UI Auto] ?见??脰? UI ?芸??𤥁??�?瘙?..");
     
     try {
       if (!this.page || this.page.isClosed()) {
@@ -861,15 +861,15 @@ class BrowserManager {
         }
       }
 
-      this.logger.info("[UI Auto] 正在重新整理並導航至全新對話環境...");
-      // 強制每次都重新整理網頁，確保 React 状态完全乾淨，避免長期掛載導致內部錯誤或 DOM 卡死
+      this.logger.info("[UI Auto] 甇?銁?齿鰵?渡?銝血??芾秐?冽鰵撠滩店?啣?...");
+      // 撘瑕�瘥𤩺活?賡??唳㟲?�雯?�?蝣箔? React ?嗆��??其嗾瘛剁??踹??瑟??𥡝?撠舘稲?折�?航炊??DOM ?⊥香
       await this.page.goto('https://aistudio.google.com/prompts/new_chat', { waitUntil: 'domcontentloaded' });
       await this.page.waitForSelector('textarea[aria-label="Enter a prompt"]', { timeout: 15000 }).catch(() => {});
       
       // Handle System Instructions Native UI Box
       if (systemInstructions) {
         try {
-          this.logger.info("[UI Auto] 偵測到 System Instructions，嘗試輸入至原生設定框...");
+          this.logger.info("[UI Auto] ?菜葫??System Instructions嚗�?閰西撓?亥秐?毺?閮剖?獢?..");
           const sysCard = await this.page.$('.system-instructions-card');
           if (sysCard) {
               await sysCard.click();
@@ -888,12 +888,12 @@ class BrowserManager {
               await this.page.waitForTimeout(500);
           }
         } catch (err) {
-            this.logger.warn("[UI Auto] 輸入 System Instructions 失敗: " + err.message);
+            this.logger.warn("[UI Auto] 頛詨� System Instructions 憭望?: " + err.message);
         }
       }
 
       if (modelName) {
-        this.logger.info(`[UI Auto] 切換模型: ${modelName}...`);
+        this.logger.info(`[UI Auto] ?�?璅∪?: ${modelName}...`);
         try {
           const currentModel = await this.page.evaluate(() => {
             const el = document.querySelector("button.model-selector-card span[data-test-id=\"model-name\"]");
@@ -937,28 +937,27 @@ class BrowserManager {
             }, targetId);
             
             if (clicked) {
-              this.logger.info(`[UI Auto] 切換模型成功: ${modelName}`);
+              this.logger.info(`[UI Auto] ?�?璅∪??𣂼?: ${modelName}`);
               await this.page.waitForTimeout(300);
             } else {
               this.logger.warn(`[UI Auto] Warning: ${modelName} not found`);
               await this.page.evaluate(() => document.querySelector("button.model-selector-card")?.click());
             }
           } else {
-            this.logger.info(`[UI Auto] 當前模型為: ${currentModel}`);
+            this.logger.info(`[UI Auto] ?嗅?璅∪??? ${currentModel}`);
           }
         } catch (e) {
-          this.logger.warn(`[UI Auto] 切換模型失敗: ${e.message}`);
+          this.logger.warn(`[UI Auto] ?�?璅∪?憭望?: ${e.message}`);
         }
       }
-      this.logger.info("[UI Auto] 輸入提示詞...");
+      this.logger.info("[UI Auto] 頛詨�?鞟內閰?..");
       
-      // 安全檢查：確認輸入框是否存在
+      // 摰匧�瑼Ｘ䰻嚗𡁶Ⅱ隤滩撓?交??臬炏摮睃銁
       const isTextareaPresent = await this.page.evaluate(() => !!document.querySelector('textarea[aria-label="Enter a prompt"]'));
       if (!isTextareaPresent) {
           const currentUrl = this.page.url();
-          this.logger.warn(`[UI Auto] 輸入框不存在！可能被彈出視窗遮擋或被登出。目前網址: ${currentUrl}`);
-          // 嘗試強制關閉可能的干擾視窗
-          await this.page.evaluate(() => {
+          this.logger.warn(`[UI Auto] 頛詨�獢�?摮睃銁嚗�虾?質◤敶�枂閬𣇉??格??𤥁◤?餃枂?�𤌍?滨雯?�: ${currentUrl}`);
+          // ?𡑒岫撘瑕�?𣈯??航�?�僕?曇?蝒?          await this.page.evaluate(() => {
               document.querySelectorAll('button').forEach(b => {
                   if (b.innerText.match(/got it|dismiss|close|ok|agree|accept/i)) b.click();
               });
@@ -966,10 +965,10 @@ class BrowserManager {
           await this.page.waitForTimeout(1000);
           
           if (currentUrl.includes('signin') || currentUrl.includes('ServiceLogin')) {
-              throw new Error("AUTH_EXPIRED: 帳號已登出，需要更新登入狀態");
+              throw new Error("AUTH_EXPIRED: 撣唾?撌脩蒈?綽??�閬�凒?啁蒈?亦???);
           }
           
-          throw new Error("FAILED_TO_START: 無法找到對話輸入框，頁面可能加載失敗");
+          throw new Error("FAILED_TO_START: ?⊥??曉�撠滩店頛詨�獢�??�𢒰?航�?㰘?憭望?");
       }
 
       await this.page.fill('textarea[aria-label="Enter a prompt"]', promptText, { timeout: 10000 });
@@ -977,7 +976,7 @@ class BrowserManager {
       await this.page.focus('textarea[aria-label="Enter a prompt"]', { timeout: 5000 });
       await this.page.keyboard.press('Control+Enter');
       
-      // Fallback: 確保真的有按下去，如果 Control+Enter 被 React 忽略，直接找按鈕點擊
+      // Fallback: 蝣箔??毺??㗇?銝见縧嚗�???Control+Enter 鋡?React 敹賜裦嚗𣬚凒?交𪄳?厰?暺墧?
       await this.page.evaluate(() => {
          const runBtns = Array.from(document.querySelectorAll('button')).filter(b => b.innerText && b.innerText.includes('Run'));
          for (const b of runBtns) {
@@ -987,7 +986,7 @@ class BrowserManager {
          if (iconBtn && !iconBtn.disabled) iconBtn.click();
       });
       
-      this.logger.info(`[UI Auto] 提示詞已發出，等待 AI 生成回覆 (最多等待 ${maxWaitMs/1000} 秒)...`);
+      this.logger.info(`[UI Auto] ?鞟內閰𧼮歇?澆枂嚗𣬚?敺?AI ?�??噼? (?�憭𡁶?敺?${maxWaitMs/1000} 蝘?...`);
       
       let response = await this.page.evaluate(async ({timeout, targetModelName}) => {
         return new Promise((resolve) => {
@@ -1060,14 +1059,14 @@ class BrowserManager {
 
             const chunks = document.querySelectorAll('ms-text-chunk:not(.user-chunk)');
             
-            // 自我修復機制: 如果 UI 還沒開始生成，且 Run 按鈕還在，每隔 5 秒重試點擊一次，避免 React 吃掉第一次的點擊事件
+            // ?芣?靽桀儔璈笔�: 憒�? UI ?�??见??�?嚗䔶? Run ?厰??�銁嚗峕???5 蝘㘾?閰阡??𠹺?甈∴??踹? React ?�?蝚砌?甈∠?暺墧?鈭衤辣
             if (chunks.length === 0 && Date.now() - lastRetryTime > 5000) {
                 lastRetryTime = Date.now();
                 const iconBtn = document.querySelector('button[aria-label*="Run"]');
                 if (iconBtn && !iconBtn.disabled) iconBtn.click();
             }
             
-            // 快速失敗機制 (Fail-fast): 如果等太久連一個字都沒出來，直接放棄並觸發重試機制
+            // 敹恍�笔仃?埈???(Fail-fast): 憒�?蝑匧云銋��???见??賣??箔?嚗𣬚凒?交𦆮璉�蒂閫貊䔄?滩岫璈笔�
             const isFlash = targetModelName.includes('flash');
             const failFastLimit = isFlash ? 30000 : 60000;
             if (Date.now() - startTime > failFastLimit && chunks.length === 0) {
@@ -1089,9 +1088,19 @@ class BrowserManager {
                                    document.querySelector('button[aria-label*="Stop"]');
                                    
               if (!isGenerating && Date.now() - startTime > 3000) {
-                  // The Stop button is gone and we've waited at least 3 seconds since start.
-                  // Generation is definitively finished!
                   clearInterval(check);
+                  const trimmed = text.trim();
+                  if (trimmed.includes("{")) {
+                      let openBraces = (trimmed.match(/\{/g) || []).length;
+                      let closeBraces = (trimmed.match(/\}/g) || []).length;
+                      let openBrackets = (trimmed.match(/\[/g) || []).length;
+                      let closeBrackets = (trimmed.match(/\]/g) || []).length;
+                      if ((openBraces > 0 && openBraces !== closeBraces) || (openBrackets > 0 && openBrackets !== closeBrackets)) {
+                          console.error("[UI Auto] 嚴重異常：檢測到 JSON 括號不對稱，判定為半途截斷！強制進入重試流程！");
+                          resolve("__UI_AUTO_GENERIC_ERROR__");
+                          return;
+                      }
+                  }
                   resolve(text);
                   return;
               }
@@ -1100,14 +1109,11 @@ class BrowserManager {
                 unchangedCount++;
                 
                 const isFlash = targetModelName.includes('flash');
-                // 延長卡死判定時間：如果是 Flash 模型且正在生成，允許卡住高達 360 次 (約 180 秒)，避免超長 JSON 被強制截斷
-                const maxUnchanged = isGenerating ? (isFlash ? 360 : 600) : 6;
+                // 撱園𩑈?⊥香?文??�?嚗𡁜??𨀣糓 Flash 璅∪?銝娍迤?函??琜??�迂?∩?擃㗛? 360 甈?(蝝?180 蝘?嚗屸�?滩???JSON 鋡怠撥?嗆⏛??                const maxUnchanged = isGenerating ? (isFlash ? 360 : 600) : 6;
                 if (unchangedCount >= maxUnchanged) {
                   clearInterval(check);
                   if (isGenerating) {
-                      // 真正的原因：網頁介面當機卡死了（一直顯示正在生成，但字數不再增加）。
-                      // 我們不應該把這半截爛尾樓回傳，這會導致使用者的前端 JSON 解析崩潰！
-                      // 應該直接丟出錯誤，讓系統自動切換帳號或重試！
+                      // ?�迤?�??𩤃?蝬脤?隞钅𢒰?嗆??⊥香鈭�?銝�?湧＊蝷箸迤?函??琜?雿�??訾??滚??𩤃???                      // ?穃�睲??㕑府?𢠃�坔??芰?撠暹??𧼮�嚗屸�蹱?撠舘稲雿輻鍂?�??滨垢 JSON 閫??撏拇蔑嚗?                      // ?㕑府?湔𦻖銝笔枂?航炊嚗諹?蝟餌絞?芸??�?撣唾??㚚?閰佗?
                       resolve("__UI_AUTO_GENERIC_ERROR__");
                   } else {
                       resolve(text);
@@ -1134,16 +1140,16 @@ class BrowserManager {
       }, {timeout: maxWaitMs, targetModelName: modelName});
       
       if (response === "__UI_AUTO_PROHIBITED_CONTENT__") {
-        this.logger.warn("[UI Auto] 偵測到 Prohibited content (安全審查攔截)！");
-        throw new Error("PROHIBITED_CONTENT: 提示詞被 Google 安全審查攔截。");
+        this.logger.warn("[UI Auto] ?菜葫??Prohibited content (摰匧�撖拇䰻?娍⏛)嚗?);
+        throw new Error("PROHIBITED_CONTENT: ?鞟內閰噼◤ Google 摰匧�撖拇䰻?娍⏛??);
       } else if (response === "__UI_AUTO_FAILED_TO_START__") {
         const dumpPath = "C:\\ais2api\\failed_start_dump_" + Date.now() + ".png";
         await this.page.screenshot({ path: dumpPath }).catch(() => {});
-        throw new Error("FAILED_TO_START: 40 秒內未偵測到 AI 開始思考或生成，提早中斷以避免卡死。");
+        throw new Error("FAILED_TO_START: 40 蝘鍦�?芸�皜砍� AI ?见??肽��??�?嚗峕??拐葉?瑚誑?踹??⊥香??);
       } else if (response === "__UI_AUTO_TIMEOUT_EMPTY__") {
         const dumpPath = "C:\\ais2api\\timeout_empty_dump_" + Date.now() + ".png";
         await this.page.screenshot({ path: dumpPath }).catch(() => {});
-        throw new Error("TIMEOUT: AI 生成時間超過系統設定的最大等待時間。");
+        throw new Error("TIMEOUT: AI ?�??�?頞�?蝟餌絞閮剖??�?憭抒?敺�??瓐�?);
       } else if (response === "__UI_AUTO_QUOTA_EXCEEDED__") {
         this.logger.warn("[UI Auto] Quota exceeded or paid API key popup detected! Attempting to close popup.");
         await this.page.evaluate(() => {
@@ -1164,30 +1170,30 @@ class BrowserManager {
       if (finalResponse === "") {
         const dumpPath = "C:\\ais2api\\empty_response_dump_" + Date.now() + ".png";
         await this.page.screenshot({ path: dumpPath }).catch(() => {});
-        this.logger.error("[UI Auto] 觸發 EMPTY_RESPONSE 保護機制，截圖已儲存: " + dumpPath);
-        throw new Error("EMPTY_RESPONSE: AI 回覆了空白內容！");
+        this.logger.error("[UI Auto] 閫貊䔄 EMPTY_RESPONSE 靽肽風璈笔�嚗峕⏛?硋歇?脣?: " + dumpPath);
+        throw new Error("EMPTY_RESPONSE: AI ?噼?鈭�征?賢�摰對?");
       }
       
-      // [解決方案] 鐵證紀錄：把 AI 成功生成的完整內容寫入本機檔案，以供驗證
+      // [閫?捱?寞?] ?菔?蝝�?�???AI ?𣂼??�??�??游�摰孵神?交𧋦璈�?獢�?隞乩?撽𡑒?
       try {
           const fs = require('fs');
-          const logText = `\n\n=== [${new Date().toISOString()}] 成功生成 (長度: ${finalResponse.length}) ===\n${finalResponse}\n======================================================\n`;
+          const logText = `\n\n=== [${new Date().toISOString()}] ?𣂼??�? (?瑕漲: ${finalResponse.length}) ===\n${finalResponse}\n======================================================\n`;
           fs.appendFileSync('C:\\ais2api\\ai_output_debug.log', logText);
       } catch (logErr) {
-          this.logger.error("[UI Auto] 寫入 debug log 失敗: " + logErr.message);
+          this.logger.error("[UI Auto] 撖怠� debug log 憭望?: " + logErr.message);
       }
       
-      this.logger.info("[UI Auto] 偵測到當前輸入框字數: " + finalResponse.length);
+      this.logger.info("[UI Auto] ?菜葫?啁訜?滩撓?交?摮埈彍: " + finalResponse.length);
       return finalResponse;
     } catch (e) {
       if ((e.message.includes("closed") || e.message.includes("Protocol error")) && retryCount < 1) {
-          this.logger.warn("[Browser] 偵測到網頁或瀏覽器已崩潰 (可能是 Cloud Run 閒置中斷)，準備強制重啟並重試...");
+          this.logger.warn("[Browser] ?菜葫?啁雯?�??讛汗?典歇撏拇蔑 (?航�??Cloud Run ?垍蔭銝剜𪃾)嚗峕??坔撥?園??煺蒂?滩岫...");
           this.page = null;
           this.context = null;
-          this.browser = null; // 強制完全重新啟動
+          this.browser = null; // 撘瑕�摰��?齿鰵?笔?
           return await this._generateTextViaUIInternal(promptText, modelName, systemInstructions, maxWaitMs, retryCount + 1);
       }
-      this.logger.error("[UI Auto] 發生異常: " + e.message);
+      this.logger.error("[UI Auto] ?潛??啣虜: " + e.message);
       throw e;
     }
   }
@@ -1200,8 +1206,8 @@ class BrowserManager {
 class LoggingService {
   constructor(serviceName = "ProxyServer") {
     this.serviceName = serviceName;
-    this.logBuffer = []; // 用于在内存中保存日志
-    this.maxBufferSize = 100; // 最多保存100条
+    this.logBuffer = []; // ?其??典?摮䀝葉靽嘥??亙?
+    this.maxBufferSize = 100; // ?�憭帋?摮?00??
   }
 
   _formatMessage(level, message) {
@@ -1210,9 +1216,9 @@ class LoggingService {
     const timestamp = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${d.getMilliseconds().toString().padStart(3, '0')}`;
     const formatted = `[${level}] ${timestamp} [${this.serviceName}] - ${message}`;
 
-    // 将格式化后的日志存入缓冲区
+    // 撠�聢撘誩??𡒊??亙?摮睃�蝻枏�??
     this.logBuffer.push(formatted);
-    // 如果缓冲区超过最大长度，则从头部删除旧的日志
+    // 憒�?蝻枏�?箄?餈�?憭折鵭摨佗??嗘?憭湧�?𣳇膄?抒??亙?
     if (this.logBuffer.length > this.maxBufferSize) {
       this.logBuffer.shift();
     }
@@ -1289,16 +1295,16 @@ class ConnectionRegistry extends EventEmitter {
     this.logger = logger;
     this.connections = new Set();
     this.messageQueues = new Map();
-    this.reconnectGraceTimer = null; // 新增：用于缓冲期计时的定时器
+    this.reconnectGraceTimer = null; // ?啣?嚗𡁶鍂鈭𡒊??脫?霈⊥𧒄?�??嗅膥
   }
   addConnection(websocket, clientInfo) {
-    // --- 核心修改：当新连接建立时，清除可能存在的“断开”警报 ---
+    // --- ?詨?靽格㺿嚗𡁜??啗??亙遣蝡𧢲𧒄嚗峕??文虾?賢??函??𨀣鱏撘�?肽郎??---
     if (this.reconnectGraceTimer) {
       clearTimeout(this.reconnectGraceTimer);
       this.reconnectGraceTimer = null;
-      this.logger.info("[Server] 在缓冲期内检测到新连接，已取消断开处理。");
+      this.logger.info("[Server] ?函??脫??�?瘚见�?啗??伐?撌脣?瘨�鱏撘�憭�???);
     }
-    // --- 修改结束 ---
+    // --- 靽格㺿蝏𤘪? ---
 
     this.connections.add(websocket);
     websocket.on("message", (data) =>
@@ -1306,26 +1312,26 @@ class ConnectionRegistry extends EventEmitter {
     );
     websocket.on("close", () => this._removeConnection(websocket));
     websocket.on("error", (error) =>
-      this.logger.error(`[Server] 内部WebSocket连接错误: ${error.message}`),
+      this.logger.error(`[Server] ?��WebSocket餈墧𦻖?躰秤: ${error.message}`),
     );
     this.emit("connectionAdded", websocket);
   }
 
   _removeConnection(websocket) {
     this.connections.delete(websocket);
-    this.logger.warn("[Server] 内部WebSocket客户端连接断开。");
+    this.logger.warn("[Server] ?��WebSocket摰Ｘ�蝡航??交鱏撘�??);
 
-    // --- 核心修改：不立即清理队列，而是启动一个缓冲期 ---
-    this.logger.info("[Server] 启动5秒重连缓冲期...");
+    // --- ?詨?靽格㺿嚗帋?蝡见朖皜�??笔?嚗諹�峕糓?臬𢆡銝�銝芰??脫? ---
+    this.logger.info("[Server] ?臬𢆡5蝘㘾?餈䂿??脫?...");
     this.reconnectGraceTimer = setTimeout(() => {
-      // 5秒后，如果没有新连接进来（即reconnectGraceTimer未被清除），则确认是真实断开
+      // 5蝘鍦?嚗�??𨀣瓷?㗇鰵餈墧𦻖餈𥟇䔉嚗�朖reconnectGraceTimer?芾◤皜�膄嚗㚁??嗵＆霈斗糓?笔??剖?
       this.logger.error(
-        "[Server] 缓冲期结束，未检测到重连。确认连接丢失，正在清理所有待处理请求...",
+        "[Server] 蝻枏�?毺??�??芣?瘚见�?滩??�＆霈方??乩腺憭梧?甇?銁皜�??�?匧?憭�?霂瑟?...",
       );
       this.messageQueues.forEach((queue) => queue.close());
       this.messageQueues.clear();
-      this.emit("connectionLost"); // 使用一个新的事件名，表示确认丢失
-    }, 10000); // 5秒的缓冲时间
+      this.emit("connectionLost"); // 雿輻鍂銝�銝芣鰵?�?隞嗅?嚗諹”蝷箇＆霈支腺憭?
+    }, 10000); // 5蝘垍?蝻枏�?園𡢿
 
     this.emit("connectionRemoved", websocket);
   }
@@ -1335,23 +1341,23 @@ class ConnectionRegistry extends EventEmitter {
       const parsedMessage = JSON.parse(messageData);
       const requestId = parsedMessage.request_id;
       if (!requestId) {
-        this.logger.warn("[Server] 收到无效消息：缺少request_id");
+        this.logger.warn("[Server] ?嗅�?䭾?瘨��嚗𡁶撩撠𩹨equest_id");
         return;
       }
       const queue = this.messageQueues.get(requestId);
       if (queue) {
         this._routeMessage(parsedMessage, queue);
       } else {
-        // 在缓冲期内，旧的请求队列可能仍然存在，但连接已经改变，这可能会导致找不到队列。
-        // 暂时只记录警告，避免因竞速条件而报错。
-        this.logger.warn(`[Server] 收到未知或已过时请求ID的消息: ${requestId}`);
+        // ?函??脫??�??抒?霂瑟??笔??航�隞滨�摮睃銁嚗䔶?餈墧𦻖撌脩??孵?嚗諹??航�隡𡁜紡?湔𪄳銝滚�?笔???
+        // ?�𧒄?芾扇敶閗郎?𠺪??踹??删??�辺隞嗉�峕𥁒?踺�?
+        this.logger.warn(`[Server] ?嗅�?芰䰻?硋歇餈�𧒄霂瑟?ID?�??? ${requestId}`);
       }
     } catch (error) {
-      this.logger.error("[Server] 解析内部WebSocket消息失败");
+      this.logger.error("[Server] 閫???��WebSocket瘨��憭梯揖");
     }
   }
 
-  // 其他方法 (_routeMessage, hasActiveConnections, getFirstConnection,等) 保持不变...
+  // ?嗡??寞? (_routeMessage, hasActiveConnections, getFirstConnection,蝑? 靽脲?銝滚?...
   _routeMessage(message, queue) {
     const { event_type } = message;
     switch (event_type) {
@@ -1364,7 +1370,7 @@ class ConnectionRegistry extends EventEmitter {
         queue.enqueue({ type: "STREAM_END" });
         break;
       default:
-        this.logger.warn(`[Server] 未知的内部事件类型: ${event_type}`);
+        this.logger.warn(`[Server] ?芰䰻?�??其?隞嗥掩?? ${event_type}`);
     }
   }
   hasActiveConnections() {
@@ -1420,14 +1426,14 @@ class RequestHandler {
   }
 
   _getNextAuthIndex() {
-    const available = this.authSource.availableIndices; // 使用新的 availableIndices
+    const available = this.authSource.availableIndices; // 雿輻鍂?啁? availableIndices
     if (available.length === 0) return null;
 
     const currentIndexInArray = available.indexOf(this.currentAuthIndex);
 
     if (currentIndexInArray === -1) {
       this.logger.warn(
-        `[Auth] 当前索引 ${this.currentAuthIndex} 不在可用列表中，将切换到第一个可用索引。`,
+        `[Auth] 敶枏?蝝Ｗ? ${this.currentAuthIndex} 銝滚銁?舐鍂?𡑒”銝哨?撠�??Ｗ�蝚砌?銝芸虾?函揣撘𨰻��,
       );
       return available[0];
     }
@@ -1440,56 +1446,56 @@ class RequestHandler {
     const available = this.authSource.availableIndices;
 
     if (available.length === 0) {
-      throw new Error("没有可用的认证源，无法切换。");
+      throw new Error("瘝⊥??舐鍂?�恕霂�?嚗峕?瘜訫??Ｕ�?);
     }
 
     if (this.isAuthSwitching) {
-      this.logger.info("🔄 [Auth] 正在切换/重启账号，跳过重复操作");
+      this.logger.info("?? [Auth] 甇?銁?�揢/?滚鍳韐血噡嚗諹歲餈�?憭齿?雿?);
       return { success: false, reason: "Switch already in progress." };
     }
 
-    // --- 加锁！ ---
+    // --- ?𣳇?嚗?---
     this.isSystemBusy = true;
     this.isAuthSwitching = true;
 
     try {
-      // 单账号模式 - 执行原地重启 (Refresh)
+      // ?閗揭?瑟芋撘?- ?扯??笔𧑐?滚鍳 (Refresh)
       if (available.length === 1) {
         const singleIndex = available[0];
         this.logger.info("==================================================");
         this.logger.info(
-          `🔄 [Auth] 单账号模式：达到轮换阈值，正在执行原地重启...`,
+          `?? [Auth] ?閗揭?瑟芋撘𧶏?颲曉�頧格揢?��潘?甇?銁?扯??笔𧑐?滚鍳...`,
         );
-        this.logger.info(`   • 目标账号: #${singleIndex}`);
+        this.logger.info(`   ???格?韐血噡: #${singleIndex}`);
         this.logger.info("==================================================");
 
         try {
-          // 强制重新加载当前账号的 Context
+          // 撘箏�?齿鰵?㰘蝸敶枏?韐血噡??Context
           await this.browserManager.launchOrSwitchContext(singleIndex);
 
-          // 关键：重置计数器
+          // ?喲睸嚗𡁻?蝵株恣?啣膥
           this.failureCount = 0;
           this.usageCount = 0;
 
           this.logger.info(
-            `✅ [Auth] 单账号 #${singleIndex} 重启/刷新成功，使用计数已清零。`,
+            `??[Auth] ?閗揭??#${singleIndex} ?滚鍳/?瑟鰵?𣂼?嚗䔶蝙?刻恣?啣歇皜�妟?�,
           );
           return { success: true, newIndex: singleIndex };
         } catch (error) {
-          this.logger.error(`❌ [Auth] 单账号重启失败: ${error.message}`);
+          this.logger.error(`??[Auth] ?閗揭?琿??臬仃韐? ${error.message}`);
           throw error;
         }
       }
 
-      // 多账号模式 - 执行轮换 (Rotate)
+      // 憭朞揭?瑟芋撘?- ?扯?頧格揢 (Rotate)
 
       const previousAuthIndex = this.currentAuthIndex;
       const nextAuthIndex = this._getNextAuthIndex();
 
       this.logger.info("==================================================");
-      this.logger.info(`🔄 [Auth] 多账号模式：开始账号切换流程`);
-      this.logger.info(`   • 当前账号: #${previousAuthIndex}`);
-      this.logger.info(`   • 目标账号: #${nextAuthIndex}`);
+      this.logger.info(`?? [Auth] 憭朞揭?瑟芋撘𧶏?撘�憪贝揭?瑕??Ｘ?蝔㞗);
+      this.logger.info(`   ??敶枏?韐血噡: #${previousAuthIndex}`);
+      this.logger.info(`   ???格?韐血噡: #${nextAuthIndex}`);
       this.logger.info("==================================================");
 
       try {
@@ -1497,22 +1503,22 @@ class RequestHandler {
         this.failureCount = 0;
         this.usageCount = 0;
         this.logger.info(
-          `✅ [Auth] 成功切换到账号 #${this.currentAuthIndex}，计数已重置。`,
+          `??[Auth] ?𣂼??�揢?啗揭??#${this.currentAuthIndex}嚗諹恣?啣歇?滨蔭?�,
         );
         return { success: true, newIndex: this.currentAuthIndex };
       } catch (error) {
         this.logger.error(
-          `❌ [Auth] 切换到账号 #${nextAuthIndex} 失败: ${error.message}`,
+          `??[Auth] ?�揢?啗揭??#${nextAuthIndex} 憭梯揖: ${error.message}`,
         );
         this.logger.warn(
-          `🚨 [Auth] 切换失败，正在尝试回退到上一个可用账号 #${previousAuthIndex}...`,
+          `?辶 [Auth] ?�揢憭梯揖嚗峕迤?典?霂訫??�?唬?銝�銝芸虾?刻揭??#${previousAuthIndex}...`,
         );
         try {
           await this.browserManager.launchOrSwitchContext(previousAuthIndex);
-          this.logger.info(`✅ [Auth] 成功回退到账号 #${previousAuthIndex}！`);
+          this.logger.info(`??[Auth] ?𣂼??鮋��?啗揭??#${previousAuthIndex}嚗�);
           this.failureCount = 0;
           this.usageCount = 0;
-          this.logger.info("[Auth] 失败和使用计数已在回退成功后重置为0。");
+          this.logger.info("[Auth] 憭梯揖?䔶蝙?刻恣?啣歇?典??�?𣂼??𡡞?蝵桐蛹0??);
           return {
             success: false,
             fallback: true,
@@ -1520,7 +1526,7 @@ class RequestHandler {
           };
         } catch (fallbackError) {
           this.logger.error(
-            `FATAL: ❌❌❌ [Auth] 紧急回退到账号 #${previousAuthIndex} 也失败了！服务可能中断。`,
+            `FATAL: ?𢞖???[Auth] 蝝扳�亙??�?啗揭??#${previousAuthIndex} 銋笔仃韐乩?嚗�??∪虾?賭葉?准��,
           );
           throw fallbackError;
         }
@@ -1533,32 +1539,32 @@ class RequestHandler {
 
   async _switchToSpecificAuth(targetIndex) {
     if (this.isAuthSwitching) {
-      this.logger.info("🔄 [Auth] 正在切换账号，跳过重复操作");
+      this.logger.info("?? [Auth] 甇?銁?�揢韐血噡嚗諹歲餈�?憭齿?雿?);
       return { success: false, reason: "Switch already in progress." };
     }
     if (!this.authSource.availableIndices.includes(targetIndex)) {
       return {
         success: false,
-        reason: `切换失败：账号 #${targetIndex} 无效或不存在。`,
+        reason: `?�揢憭梯揖嚗朞揭??#${targetIndex} ?䭾??碶?摮睃銁?�,
       };
     }
 
     this.isSystemBusy = true;
     this.isAuthSwitching = true;
     try {
-      this.logger.info(`🔄 [Auth] 开始切换到指定账号 #${targetIndex}...`);
+      this.logger.info(`?? [Auth] 撘�憪见??Ｗ�?�?韐血噡 #${targetIndex}...`);
       await this.browserManager.switchAccount(targetIndex);
       this.failureCount = 0;
       this.usageCount = 0;
       this.logger.info(
-        `✅ [Auth] 成功切换到账号 #${this.currentAuthIndex}，计数已重置。`,
+        `??[Auth] ?𣂼??�揢?啗揭??#${this.currentAuthIndex}嚗諹恣?啣歇?滨蔭?�,
       );
       return { success: true, newIndex: this.currentAuthIndex };
     } catch (error) {
       this.logger.error(
-        `❌ [Auth] 切换到指定账号 #${targetIndex} 失败: ${error.message}`,
+        `??[Auth] ?�揢?唳?摰朞揭??#${targetIndex} 憭梯揖: ${error.message}`,
       );
-      // 对于指定切换，失败了就直接报错，不进行回退，让用户知道这个账号有问题
+      // 撖嫣??�??�揢嚗�仃韐乩?撠梁凒?交𥁒?辷?銝滩?銵�??�嚗諹悟?冽�?仿?餈嗘葵韐血噡?厰䔮憸?
       throw error;
     } finally {
       this.isAuthSwitching = false;
@@ -1567,11 +1573,11 @@ class RequestHandler {
   }
 
   async _handleRequestFailureAndSwitch(errorDetails, res) {
-    // 失败计数逻辑
+    // 憭梯揖霈⊥㺭?餉?
     if (this.config.failureThreshold > 0) {
       this.failureCount++;
       this.logger.warn(
-        `⚠️ [Auth] 请求失败 - 失败计数: ${this.failureCount}/${this.config.failureThreshold} (当前账号索引: ${this.currentAuthIndex})`,
+        `?𩤃? [Auth] 霂瑟?憭梯揖 - 憭梯揖霈⊥㺭: ${this.failureCount}/${this.config.failureThreshold} (敶枏?韐血噡蝝Ｗ?: ${this.currentAuthIndex})`,
       );
     }
 
@@ -1582,42 +1588,42 @@ class RequestHandler {
       this.config.failureThreshold > 0 &&
       this.failureCount >= this.config.failureThreshold;
 
-    // 只要满足任一切换条件
+    // ?芾?皛∟雲隞颱??�揢?∩辣
     if (isImmediateSwitch || isThresholdReached) {
       if (isImmediateSwitch) {
         this.logger.warn(
-          `🔴 [Auth] 收到状态码 ${errorDetails.status}，触发立即切换账号...`,
+          `?𣞁 [Auth] ?嗅�?嗆��? ${errorDetails.status}嚗諹圻?𤑳??喳??Ｚ揭??..`,
         );
       } else {
         this.logger.warn(
-          `🔴 [Auth] 达到失败阈值 (${this.failureCount}/${this.config.failureThreshold})！准备切换账号...`,
+          `?𣞁 [Auth] 颲曉�憭梯揖?��?(${this.failureCount}/${this.config.failureThreshold})嚗�?憭�??Ｚ揭??..`,
         );
       }
 
-      // [核心修改] 等待切换操作完成，并根据其结果发送不同消息
+      // [?詨?靽格㺿] 蝑匧??�揢?滢?摰峕?嚗�僎?寞旿?嗥??𨅯??�??峕???
       try {
         await this._switchToNextAuth();
-        // 如果上面这行代码没有抛出错误，说明切换/回退成功了
-        const successMessage = `🔄 目标账户无效，已自动回退至账号 #${this.currentAuthIndex}。`;
+        // 憒�?銝𢠃𢒰餈躰?隞??瘝⊥??𥕦枂?躰秤嚗諹秩?𤾸????鮋��?𣂼?鈭?
+        const successMessage = `?? ?格?韐行�?䭾?嚗�歇?芸𢆡?鮋��?唾揭??#${this.currentAuthIndex}?�;
         this.logger.info(`[Auth] ${successMessage}`);
         if (res) this._sendErrorChunkToClient(res, successMessage);
       } catch (error) {
-        let userMessage = `❌ 致命错误：发生未知切换错误: ${error.message}`;
+        let userMessage = `???游𦶢?躰秤嚗𡁜??�𧊋?亙??ａ?霂? ${error.message}`;
 
         if (error.message.includes("Only one account is available")) {
-          // 场景：单账号无法切换
-          userMessage = "❌ 切换失败：只有一个可用账号。";
-          this.logger.info("[Auth] 只有一个可用账号，失败计数已重置。");
+          // ?箸艶嚗𡁜?韐血噡?䭾??�揢
+          userMessage = "???�揢憭梯揖嚗𡁜蘨?劐?銝芸虾?刻揭?瑯�?;
+          this.logger.info("[Auth] ?芣?銝�銝芸虾?刻揭?瘀?憭梯揖霈⊥㺭撌脤?蝵柴�?);
           this.failureCount = 0;
-        } else if (error.message.includes("回退失败原因")) {
-          // 场景：切换到坏账号后，连回退都失败了
-          userMessage = `❌ 致命错误：自动切换和紧急回退均失败，服务可能已中断，请检查日志！`;
-        } else if (error.message.includes("切换到账号")) {
-          // 场景：切换到坏账号后，成功回退（这是一个伪“成功”，本质是上一个操作失败了）
-          userMessage = `⚠️ 自动切换失败：已自动回退到账号 #${this.currentAuthIndex}，请检查目标账号是否存在问题。`;
+        } else if (error.message.includes("?鮋��憭梯揖?笔?")) {
+          // ?箸艶嚗𡁜??Ｗ�?讛揭?瑕?嚗諹??鮋��?賢仃韐乩?
+          userMessage = `???游𦶢?躰秤嚗朞䌊?典??Ｗ?蝝扳�亙??�?�仃韐伐??滚𦛚?航�撌脖葉?哨?霂瑟??交𠯫敹梹?`;
+        } else if (error.message.includes("?�揢?啗揭??)) {
+          // ?箸艶嚗𡁜??Ｗ�?讛揭?瑕?嚗峕??笔??�嚗�??臭?銝芯憚?𨀣??麨�嘅??祈捶?臭?銝�銝芣?雿𨅯仃韐乩?嚗?
+          userMessage = `?𩤃? ?芸𢆡?�揢憭梯揖嚗𡁜歇?芸𢆡?鮋��?啗揭??#${this.currentAuthIndex}嚗諹窈璉�?亦𤌍?�揭?瑟糓?血??券䔮憸塩��;
         }
 
-        this.logger.error(`[Auth] 后台账号切换任务最终失败: ${error.message}`);
+        this.logger.error(`[Auth] ?𤾸蝱韐血噡?�揢隞餃𦛚?�蝏�仃韐? ${error.message}`);
         if (res) this._sendErrorChunkToClient(res, userMessage);
       }
 
@@ -1633,7 +1639,7 @@ class RequestHandler {
     res.on("close", () => {
       if (!res.writableEnded) {
         this.logger.warn(
-          `[Request] 客户端已提前关闭请求 #${requestId} 的连接。`,
+          `[Request] 摰Ｘ�蝡臬歇?𣂼??喲𡡒霂瑟? #${requestId} ?�??乓��,
         );
         this._cancelBrowserRequest(requestId);
       }
@@ -1642,23 +1648,23 @@ class RequestHandler {
     if (!this.connectionRegistry.hasActiveConnections()) {
       if (this.isSystemBusy) {
         this.logger.warn(
-          "[System] 检测到连接断开，但系统正在进行切换/恢复，拒绝新请求。",
+          "[System] 璉�瘚见�餈墧𦻖?剖?嚗䔶?蝟餌?甇?銁餈𥡝??�揢/?Ｗ?嚗峕?蝏脲鰵霂瑟???,
         );
         return this._sendErrorResponse(
           res,
           503,
-          "服务器正在进行内部维护（账号切换/恢复），请稍后重试。",
+          "?滚𦛚?冽迤?刻?銵�??函輕?歹?韐血噡?�揢/?Ｗ?嚗㚁?霂瑞??𡡞?霂𨰻�?,
         );
       }
 
       this.logger.error(
-        "❌ [System] 检测到浏览器WebSocket连接已断开！可能是进程崩溃。正在尝试恢复...",
+        "??[System] 璉�瘚见�瘚讛??汾ebSocket餈墧𦻖撌脫鱏撘�嚗�虾?賣糓餈𤤿?撏拇??�迤?典?霂閙�憭?..",
       );
-      // --- 开始恢复前，加锁！ ---
+      // --- 撘�憪𧢲�憭滚?嚗�??�? ---
       this.isSystemBusy = true;
       try {
         await this.browserManager.launchOrSwitchContext(this.currentAuthIndex);
-        this.logger.info(`[System] 浏览器页面已加载，等待 WebSocket 握手...`);
+        this.logger.info(`[System] 瘚讛??券△?Ｗ歇?㰘蝸嚗𣬚?敺?WebSocket ?⊥?...`);
         let wsReady = false;
         for (let i = 0; i < 20; i++) {
           if (this.connectionRegistry.hasActiveConnections()) {
@@ -1670,31 +1676,31 @@ class RequestHandler {
 
         if (!wsReady) {
           throw new Error(
-            "浏览器已启动，但前端 WebSocket 始终未能连接到代理端。",
+            "瘚讛??典歇?臬𢆡嚗䔶??滨垢 WebSocket 憪讠??芾�餈墧𦻖?唬誨?�垢??,
           );
         }
-        this.logger.info(`✅ [System] 浏览器与 WebSocket 已完全恢复就绪！`);
+        this.logger.info(`??[System] 瘚讛??其? WebSocket 撌脣??冽�憭滚停蝏迎?`);
       } catch (error) {
-        this.logger.error(`❌ [System] 浏览器自动恢复失败: ${error.message}`);
+        this.logger.error(`??[System] 瘚讛??刻䌊?冽�憭滚仃韐? ${error.message}`);
         return this._sendErrorResponse(
           res,
           503,
-          "服务暂时不可用：后端浏览器实例崩溃且无法自动恢复，请联系管理员。",
+          "?滚𦛚?�𧒄銝滚虾?剁??𡒊垢瘚讛??典?靘见援皞�??䭾??芸𢆡?Ｗ?嚗諹窈?𠉛頂蝞∠??塩�?,
         );
       } finally {
-        // 只有确信 WS 连上了，或者彻底失败了，才解锁
+        // ?芣?蝖桐縑 WS 餈硺?鈭�??𤥁��蝠摨訫仃韐乩?嚗峕?閫??
         this.isSystemBusy = false;
       }
     }
 
     if (this.isSystemBusy) {
       this.logger.warn(
-        "[System] 收到新请求，但系统正在进行切换/恢复，拒绝新请求。",
+        "[System] ?嗅�?啗窈瘙�?雿�頂蝏�迤?刻?銵�????Ｗ?嚗峕?蝏脲鰵霂瑟???,
       );
       return this._sendErrorResponse(
         res,
         503,
-        "服务器正在进行内部维护（账号切换/恢复），请稍后重试。",
+        "?滚𦛚?冽迤?刻?銵�??函輕?歹?韐血噡?�揢/?Ｗ?嚗㚁?霂瑞??𡡞?霂𨰻�?,
       );
     }
 
@@ -1705,7 +1711,7 @@ class RequestHandler {
     if (this.config.switchOnUses > 0 && isGenerativeRequest) {
       this.usageCount++;
       this.logger.info(
-        `[Request] 生成请求 - 账号轮换计数: ${this.usageCount}/${this.config.switchOnUses} (当前账号: ${this.currentAuthIndex})`,
+        `[Request] ?�?霂瑟? - 韐血噡頧格揢霈⊥㺭: ${this.usageCount}/${this.config.switchOnUses} (敶枏?韐血噡: ${this.currentAuthIndex})`,
       );
       if (this.usageCount >= this.config.switchOnUses) {
         this.needsSwitchingAfterRequest = true;
@@ -1714,7 +1720,7 @@ class RequestHandler {
 
     const proxyRequest = this._buildProxyRequest(req, requestId);
     proxyRequest.is_generative = isGenerativeRequest;
-    // 根据判断结果，为浏览器脚本准备标志位
+    // ?寞旿?斗鱏蝏𤘪?嚗䔶蛹瘚讛??刻??砍?憭�?敹𦯀?
     const messageQueue = this.connectionRegistry.createMessageQueue(requestId);
     const wantsStreamByHeader =
       req.headers.accept && req.headers.accept.includes("text/event-stream");
@@ -1723,9 +1729,9 @@ class RequestHandler {
 
     try {
       if (wantsStream) {
-        // --- 客户端想要流式响应 ---
+        // --- 摰Ｘ�蝡舀�閬�?撘誩?摨?---
         this.logger.info(
-          `[Request] 客户端启用流式传输 (${this.serverSystem.streamingMode})，进入流式处理模式...`,
+          `[Request] 摰Ｘ�蝡臬鍳?冽?撘譍?颲?(${this.serverSystem.streamingMode})嚗諹??交?撘誩??�芋撘?..`,
         );
         if (this.serverSystem.streamingMode === "fake") {
           await this._handlePseudoStreamResponse(
@@ -1738,8 +1744,8 @@ class RequestHandler {
           await this._handleRealStreamResponse(proxyRequest, messageQueue, res);
         }
       } else {
-        // --- 客户端想要非流式响应 ---
-        // 明确告知浏览器脚本本次应按“一次性JSON”（即fake模式）来处理
+        // --- 摰Ｘ�蝡舀�閬�?瘚�??滚? ---
+        // ?𡒊＆?羓䰻瘚讛??刻??祆𧋦甈∪??争�靝?甈⊥�克SON?嘅??貨ake璅∪?嚗㗇䔉憭�?
         proxyRequest.streaming_mode = "fake";
         await this._handleNonStreamResponse(proxyRequest, messageQueue, res);
       }
@@ -1749,10 +1755,10 @@ class RequestHandler {
       this.connectionRegistry.removeMessageQueue(requestId);
       if (this.needsSwitchingAfterRequest) {
         this.logger.info(
-          `[Auth] 轮换计数已达到切换阈值 (${this.usageCount}/${this.config.switchOnUses})，将在后台自动切换账号...`,
+          `[Auth] 頧格揢霈⊥㺭撌脰噢?啣??ａ???(${this.usageCount}/${this.config.switchOnUses})嚗�??典??啗䌊?典??Ｚ揭??..`,
         );
         this._switchToNextAuth().catch((err) => {
-          this.logger.error(`[Auth] 處理自動切換帳號時發生錯誤: ${err.message}`);
+          this.logger.error(`[Auth] ?閧??芸??�?撣唾??�䔄?罸𥲤隤? ${err.message}`);
         });
         this.needsSwitchingAfterRequest = false;
       }
@@ -1772,12 +1778,12 @@ class RequestHandler {
       const requestId = this._generateRequestId();
 
     // =====================================================================
-    // ?椘儭??脰風璈笔�嚗?撌脩宏?上ebSocket瑼Ｘ䰻嚗�??箇𣶹?函?UI璅∪?銝漤?閬?
+    // ?璊睃�???圈◢?�?嚙賢???諹�摰?銝𩩍bSocket?潘撓銊餃?嚙??蝞�ㄥ???UI?�⏛??脲慾???
     // =====================================================================
 
     const isOpenAIStream = req.body.stream === true;
     
-    // ?? ?躰ㄐ撠望糓??Python ?喃??�芋?卝��??𨀣??喉??脣??嗵鍂?潭㺿??2.5 鈭�?
+    // ?? ?頨啜??䭾?蝟??Python ????嚙質???嘅蕭嚙??藂�?????????菟??瞏准瑪??2.5 ?哨蕭?
     const model = req.body.model || "gemini-2.5-pro"; 
     const systemStreamMode = this.serverSystem.streamingMode;
     const useRealStream = isOpenAIStream && systemStreamMode === "real";
@@ -1785,7 +1791,7 @@ class RequestHandler {
     if (this.config.switchOnUses > 0) {
       this.usageCount++;
       this.logger.info(
-        `[Request] OpenAI?�?霂瑟? - 韐血噡頧格揢霈⊥㺭: ${this.usageCount}/${this.config.switchOnUses} (敶枏?韐血噡: ${this.currentAuthIndex})`,
+        `[Request] OpenAI?嚙??�?? - ?鞱??⊿𡵆?潭𨘻?�𥁒蒪? ${this.usageCount}/${this.config.switchOnUses} (?嗆???鞱??? ${this.currentAuthIndex})`,
       );
       if (this.usageCount >= this.config.switchOnUses) {
         this.needsSwitchingAfterRequest = true;
@@ -1796,7 +1802,7 @@ class RequestHandler {
     try {
       googleBody = this._translateOpenAIToGoogle(req.body, model);
     } catch (error) {
-      this.logger.error(`[Adapter] OpenAI霂瑟?蝧餉?憭梯揖: ${error.message}`);
+      this.logger.error(`[Adapter] OpenAI?�???折???剜０?? ${error.message}`);
       return this._sendErrorResponse(res, 400, "Invalid OpenAI request format");
     }
 
@@ -1851,7 +1857,7 @@ class RequestHandler {
             lastError = null; // Success!
             break; 
         } catch (error) {
-            this.logger.error(`[Adapter] 第 ${attempt} 次生成嘗試失敗: ${error.message}`);
+            this.logger.error(`[Adapter] 蝚?${attempt} 甈∠??𣂼?閰血仃?? ${error.message}`);
             lastError = error;
             
             let isRecoverable = error.message.includes("QUOTA_EXCEEDED") || error.message.includes("INTERNAL_ERROR") || error.message.includes("FAILED_TO_START") || error.message.includes("EMPTY_RESPONSE") || error.message.includes("Timeout") || error.message.includes("AUTH_EXPIRED"); 
@@ -1868,34 +1874,32 @@ class RequestHandler {
                         } else {
                             systemInstructionsText = jailbreakText;
                         }
-                        this.logger.warn(`[Adapter] 觸發安全審查，已注入 jailbreak.txt (作為 System Prompt) 並準備重試...`);
+                        this.logger.warn(`[Adapter] 閫貊䔄摰匧�撖拇䰻嚗�歇瘜典� jailbreak.txt (雿𦦵� System Prompt) 銝行??䠷?閰?..`);
                         hasAppliedJailbreak = true;
                         isRecoverable = true;
                     } else {
-                        this.logger.warn(`[Adapter] 觸發安全審查，但找不到 jailbreak.txt，放棄重試。`);
+                        this.logger.warn(`[Adapter] 閫貊䔄摰匧�撖拇䰻嚗䔶??曆???jailbreak.txt嚗峕𦆮璉�?閰艾��);
                     }
                 } catch (err) {
-                    this.logger.error(`[Adapter] 注入 jailbreak.txt 失敗: ${err.message}`);
+                    this.logger.error(`[Adapter] 瘜典� jailbreak.txt 憭望?: ${err.message}`);
                 }
             }
             
             if (isRecoverable && attempt < maxGlobalRetries) {
-                this.logger.warn(`[Auth] 觸發內部透明重試機制，正在切換帳號並準備第 ${attempt + 1} 次嘗試...`);
+                this.logger.warn(`[Auth] 閫貊䔄?折�?𤩺??滩岫璈笔�嚗峕迤?典??𥕦董?煺蒂皞硋?蝚?${attempt + 1} 甈∪?閰?..`);
                 try {
                     await this._switchToNextAuth();
                 } catch (switchErr) {
-                    this.logger.error(`[Auth] 切換帳號失敗: ${switchErr.message}`);
+                    this.logger.error(`[Auth] ?�?撣唾?憭望?: ${switchErr.message}`);
                 }
-                continue; // 重新嘗試
+                continue; // ?齿鰵?𡑒岫
             }
             
-            // 如果是最後一次嘗試依然失敗，或者是不在可恢復清單內的錯誤
-            if (isRecoverable) {
-                this.logger.warn(`[Auth] 最終嘗試依然失敗 (${error.message})，排定背景切換帳號。`);
+            // 憒�??舀?敺䔶?甈∪?閰虫??嗅仃?梹??𤥁��糓銝滚銁?舀�敺拇??桀�?�𥲤隤?            if (isRecoverable) {
+                this.logger.warn(`[Auth] ?�蝯�?閰虫??嗅仃??(${error.message})嚗峕?摰朞??臬??𥕦董?麄��);
                 this._switchToNextAuth().catch(() => {});
             }
-            break; // 結束迴圈，準備拋出錯誤
-        }
+            break; // 蝯鞉?餈游?嚗峕??蹱??粹𥲤隤?        }
     }
 
     if (heartbeatInterval) clearInterval(heartbeatInterval);
@@ -1931,7 +1935,7 @@ class RequestHandler {
         }
       }
     } catch (error) {
-      this.logger.error(`[Adapter] 寫入回應時發生錯誤: ${error.message}`);
+      this.logger.error(`[Adapter] 撖怠�?墧??�䔄?罸𥲤隤? ${error.message}`);
       if (!res.headersSent) {
         return this._sendErrorResponse(res, 500, `Internal Server Error: ${error.message}`);
       }
@@ -1939,7 +1943,7 @@ class RequestHandler {
 
     if (this.needsSwitchingAfterRequest) {
       this._switchToNextAuth().catch((err) => {
-        this.logger.error(`[Auth] 處理自動切換帳號時發生錯誤: ${err.message}`);
+        this.logger.error(`[Auth] ?閧??芸??�?撣唾??�䔄?罸𥲤隤? ${err.message}`);
       });
       this.needsSwitchingAfterRequest = false;
     }
@@ -1949,7 +1953,7 @@ class RequestHandler {
     const connection = this.connectionRegistry.getFirstConnection();
     if (connection) {
       this.logger.info(
-        `[Request] 正在向浏览器发送取消请求 #${requestId} 的指令...`,
+        `[Request] 甇?銁?烐?閫�膥?煾��?瘨�窈瘙?#${requestId} ?�?隞?..`,
       );
       connection.send(
         JSON.stringify({
@@ -1959,7 +1963,7 @@ class RequestHandler {
       );
     } else {
       this.logger.warn(
-        `[Request] 无法发送取消指令：没有可用的浏览器WebSocket连接。`,
+        `[Request] ?䭾??煾��?瘨�?隞歹?瘝⊥??舐鍂?�?閫�膥WebSocket餈墧𦻖?�,
       );
     }
   }
@@ -1981,12 +1985,12 @@ class RequestHandler {
 
       if (!bodyObj.generationConfig.thinkingConfig) {
         this.logger.info(
-          `[Proxy] ⚠️ (Google原生格式) 强制推理已启用，且客户端未提供配置，正在注入 thinkingConfig...`,
+          `[Proxy] ?𩤃? (Google?毺??澆?) 撘箏�?函?撌脣鍳?剁?銝𥪜恥?瑞垢?芣?靘偦?蝵殷?甇?銁瘜典� thinkingConfig...`,
         );
         bodyObj.generationConfig.thinkingConfig = { includeThoughts: true };
       } else {
         this.logger.info(
-          `[Proxy] ✅ (Google原生格式) 检测到客户端自带推理配置，跳过强制注入。`,
+          `[Proxy] ??(Google?毺??澆?) 璉�瘚见�摰Ｘ�蝡航䌊撣行綫?�?蝵殷?頝唾?撘箏�瘜典�?�,
         );
       }
     }
@@ -2011,13 +2015,13 @@ class RequestHandler {
     if (connection) {
       connection.send(JSON.stringify(proxyRequest));
     } else {
-      throw new Error("无法转发请求：没有可用的WebSocket连接。");
+      throw new Error("?䭾?頧砍?霂瑟?嚗𡁏瓷?匧虾?函?WebSocket餈墧𦻖??);
     }
   }
   _sendErrorChunkToClient(res, errorMessage) {
     const errorPayload = {
       error: {
-        message: `[代理系统提示] ${errorMessage}`,
+        message: `[隞??蝟餌??鞟內] ${errorMessage}`,
         type: "proxy_error",
         code: "proxy_error",
       },
@@ -2025,13 +2029,13 @@ class RequestHandler {
     const chunk = `data: ${JSON.stringify(errorPayload)}\n\n`;
     if (res && !res.writableEnded) {
       res.write(chunk);
-      this.logger.info(`[Request] 已向客户端发送标准错误信号: ${errorMessage}`);
+      this.logger.info(`[Request] 撌脣?摰Ｘ�蝡臬??�??�?霂臭縑?? ${errorMessage}`);
     }
   }
 
   async _handlePseudoStreamResponse(proxyRequest, messageQueue, req, res) {
     this.logger.info(
-      "[Request] 客户端启用流式传输 (fake)，进入伪流式处理模式...",
+      "[Request] 摰Ｘ�蝡臬鍳?冽?撘譍?颲?(fake)嚗諹??乩憚瘚�?憭�?璅∪?...",
     );
     res.status(200).set({
       "Content-Type": "text/event-stream",
@@ -2046,11 +2050,11 @@ class RequestHandler {
       let lastMessage,
         requestFailed = false;
 
-      // 我们的重试循环（即使只跑一次）
+      // ?睲賑?�?霂訫儐?荔??喃蝙?芾?銝�甈∴?
       for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
         if (attempt > 1) {
           this.logger.info(
-            `[Request] 请求尝试 #${attempt}/${this.maxRetries}...`,
+            `[Request] 霂瑟?撠肽? #${attempt}/${this.maxRetries}...`,
           );
         }
         this._forwardRequest(proxyRequest);
@@ -2071,7 +2075,7 @@ class RequestHandler {
             timeoutPromise,
           ]);
         } catch (timeoutError) {
-          this.logger.error(`[Request] 致命错误: ${timeoutError.message}`);
+          this.logger.error(`[Request] ?游𦶢?躰秤: ${timeoutError.message}`);
           lastMessage = {
             event_type: "error",
             status: 504,
@@ -2080,18 +2084,18 @@ class RequestHandler {
         }
 
         if (lastMessage.event_type === "error") {
-          // --- 核心修改：在这里就区分，避免打印不必要的“失败”日志 ---
+          // --- ?詨?靽格㺿嚗𡁜銁餈䠷?撠勗躹?�??踹??枏㫲銝滚?閬�??𨅯仃韐乒�脲𠯫敹?---
           if (
             !(
               lastMessage.message &&
               lastMessage.message.includes("The user aborted a request")
             )
           ) {
-            // 只有在不是“用户取消”的情况下，才打印“尝试失败”的警告
+            // ?芣??其??胼�𦦵鍂?瑕?瘨��萘??��銝页??齿??售�𨅯?霂訫仃韐乒�萘?霅血?
             this.logger.warn(
-              `[Request] 尝试 #${attempt} 失败: 收到 ${
-                lastMessage.status || "未知"
-              } 错误。 - ${lastMessage.message}`,
+              `[Request] 撠肽? #${attempt} 憭梯揖: ?嗅� ${
+                lastMessage.status || "?芰䰻"
+              } ?躰秤??- ${lastMessage.message}`,
             );
           }
 
@@ -2106,32 +2110,32 @@ class RequestHandler {
         break;
       }
 
-      // 处理最终结果
+      // 憭�??�蝏�???
       if (requestFailed) {
         if (
           lastMessage.message &&
           lastMessage.message.includes("The user aborted a request")
         ) {
           this.logger.info(
-            `[Request] 请求 #${proxyRequest.request_id} 已由用户妥善取消，不计入失败统计。`,
+            `[Request] 霂瑟? #${proxyRequest.request_id} 撌脩眏?冽�憒亙??𡝗?嚗䔶?霈∪�憭梯揖蝏蠘恣?�,
           );
         } else {
           this.logger.error(
-            `[Request] 所有 ${this.maxRetries} 次重试均失败，将计入失败统计。`,
+            `[Request] ?�??${this.maxRetries} 甈⊿?霂訫?憭梯揖嚗�?霈∪�憭梯揖蝏蠘恣?�,
           );
           await this._handleRequestFailureAndSwitch(lastMessage, res);
           this._sendErrorChunkToClient(
             res,
-            `请求最终失败: ${lastMessage.message}`,
+            `霂瑟??�蝏�仃韐? ${lastMessage.message}`,
           );
         }
         return;
       }
 
-      // 成功的逻辑
+      // ?𣂼??��餉?
       if (proxyRequest.is_generative && this.failureCount > 0) {
         this.logger.info(
-          `✅ [Auth] 生成请求成功 - 失败计数已从 ${this.failureCount} 重置为 0`,
+          `??[Auth] ?�?霂瑟??𣂼? - 憭梯揖霈⊥㺭撌脖? ${this.failureCount} ?滨蔭銝?0`,
         );
         this.failureCount = 0;
       }
@@ -2141,14 +2145,14 @@ class RequestHandler {
         res.write(`data: ${dataMessage.data}\n\n`);
       }
       if (endMessage.type !== "STREAM_END") {
-        this.logger.warn("[Request] 未收到预期的流结束信号。");
+        this.logger.warn("[Request] ?芣𤣰?圈??毺?瘚�??煺縑?瑯�?);
       }
       try {
         const fullResponse = JSON.parse(dataMessage.data);
         const finishReason =
           fullResponse.candidates?.[0]?.finishReason || "UNKNOWN";
         this.logger.info(
-          `✅ [Request] 响应结束，原因: ${finishReason}，请求ID: ${proxyRequest.request_id}`,
+          `??[Request] ?滚?蝏𤘪?嚗�??? ${finishReason}嚗諹窈瘙�D: ${proxyRequest.request_id}`,
         );
       } catch (e) {}
       res.write("data: [DONE]\n\n");
@@ -2160,13 +2164,13 @@ class RequestHandler {
         res.end();
       }
       this.logger.info(
-        `[Request] 响应处理结束，请求ID: ${proxyRequest.request_id}`,
+        `[Request] ?滚?憭�?蝏𤘪?嚗諹窈瘙�D: ${proxyRequest.request_id}`,
       );
     }
   }
 
   async _handleRealStreamResponse(proxyRequest, messageQueue, res) {
-    this.logger.info(`[Request] 请求已派发给浏览器端处理...`);
+    this.logger.info(`[Request] 霂瑟?撌脫晷?𤑳?瘚讛??函垢憭�?...`);
     this._forwardRequest(proxyRequest);
     const headerMessage = await messageQueue.dequeue();
 
@@ -2176,10 +2180,10 @@ class RequestHandler {
         headerMessage.message.includes("The user aborted a request")
       ) {
         this.logger.info(
-          `[Request] 请求 #${proxyRequest.request_id} 已被用户妥善取消，不计入失败统计。`,
+          `[Request] 霂瑟? #${proxyRequest.request_id} 撌脰◤?冽�憒亙??𡝗?嚗䔶?霈∪�憭梯揖蝏蠘恣?�,
         );
       } else {
-        this.logger.error(`[Request] 请求失败，将计入失败统计。`);
+        this.logger.error(`[Request] 霂瑟?憭梯揖嚗�?霈∪�憭梯揖蝏蠘恣?�);
         await this._handleRequestFailureAndSwitch(headerMessage, null);
         return this._sendErrorResponse(
           res,
@@ -2191,23 +2195,23 @@ class RequestHandler {
       return;
     }
 
-    // --- 核心修改：只有在生成请求成功时，才重置失败计数 ---
+    // --- ?詨?靽格㺿嚗𡁜蘨?匧銁?�?霂瑟??𣂼??塚??漤?蝵桀仃韐亥恣??---
     if (proxyRequest.is_generative && this.failureCount > 0) {
       this.logger.info(
-        `✅ [Auth] 生成请求成功 - 失败计数已从 ${this.failureCount} 重置为 0`,
+        `??[Auth] ?�?霂瑟??𣂼? - 憭梯揖霈⊥㺭撌脖? ${this.failureCount} ?滨蔭銝?0`,
       );
       this.failureCount = 0;
     }
-    // --- 修改结束 ---
+    // --- 靽格㺿蝏𤘪? ---
 
     this._setResponseHeaders(res, headerMessage);
-    this.logger.info("[Request] 开始流式传输...");
+    this.logger.info("[Request] 撘�憪𧢲?撘譍?颲?..");
     try {
       let lastChunk = "";
       while (true) {
         const dataMessage = await messageQueue.dequeue(30000);
         if (dataMessage.type === "STREAM_END") {
-          this.logger.info("[Request] 收到流结束信号。");
+          this.logger.info("[Request] ?嗅�瘚�??煺縑?瑯�?);
           break;
         }
         if (dataMessage.data) {
@@ -2223,40 +2227,40 @@ class RequestHandler {
             const finishReason =
               lastResponse.candidates?.[0]?.finishReason || "UNKNOWN";
             this.logger.info(
-              `✅ [Request] 响应结束，原因: ${finishReason}，请求ID: ${proxyRequest.request_id}`,
+              `??[Request] ?滚?蝏𤘪?嚗�??? ${finishReason}嚗諹窈瘙�D: ${proxyRequest.request_id}`,
             );
           }
         }
       } catch (e) {}
     } catch (error) {
       if (error.message !== "Queue timeout") throw error;
-      this.logger.warn("[Request] 真流式响应超时，可能流已正常结束。");
+      this.logger.warn("[Request] ?�?撘誩?摨磰??塚??航�瘚�歇甇?虜蝏𤘪???);
     } finally {
       if (!res.writableEnded) res.end();
       this.logger.info(
-        `[Request] 真流式响应连接已关闭，请求ID: ${proxyRequest.request_id}`,
+        `[Request] ?�?撘誩?摨磰??亙歇?喲𡡒嚗諹窈瘙�D: ${proxyRequest.request_id}`,
       );
     }
   }
 
   async _handleNonStreamResponse(proxyRequest, messageQueue, res) {
-    this.logger.info(`[Request] 进入非流式处理模式...`);
+    this.logger.info(`[Request] 餈𥕦�?墧?撘誩??�芋撘?..`);
 
-    // 转发请求到浏览器端
+    // 頧砍?霂瑟??唳?閫�膥蝡?
     this._forwardRequest(proxyRequest);
 
     try {
-      // 1. 等待响应头信息
+      // 1. 蝑匧??滚?憭港縑??
       const headerMessage = await messageQueue.dequeue();
       if (headerMessage.event_type === "error") {
-        // ... (错误处理逻辑保持不变)
+        // ... (?躰秤憭�??餉?靽脲?銝滚?)
         if (headerMessage.message?.includes("The user aborted a request")) {
           this.logger.info(
-            `[Request] 请求 #${proxyRequest.request_id} 已被用户妥善取消。`,
+            `[Request] 霂瑟? #${proxyRequest.request_id} 撌脰◤?冽�憒亙??𡝗??�,
           );
         } else {
           this.logger.error(
-            `[Request] 浏览器端返回错误: ${headerMessage.message}`,
+            `[Request] 瘚讛??函垢餈𥪜??躰秤: ${headerMessage.message}`,
           );
           await this._handleRequestFailureAndSwitch(headerMessage, null);
         }
@@ -2267,12 +2271,12 @@ class RequestHandler {
         );
       }
 
-      // 2. 准备一个缓冲区，并确保循环等待直到收到结束信号
+      // 2. ?�?銝�銝芰??脣躹嚗�僎蝖桐?敺芰㴓蝑匧??游�?嗅�蝏𤘪?靽∪噡
       let fullBody = "";
       while (true) {
         const message = await messageQueue.dequeue(300000);
         if (message.type === "STREAM_END") {
-          this.logger.info("[Request] 收到结束信号，数据接收完毕。");
+          this.logger.info("[Request] ?嗅�蝏𤘪?靽∪噡嚗峕㺭?格𦻖?嗅?瘥𨰻�?);
           break;
         }
         if (message.event_type === "chunk" && message.data) {
@@ -2280,15 +2284,15 @@ class RequestHandler {
         }
       }
 
-      // 3. 重置失败计数器（如果需要）
+      // 3. ?滨蔭憭梯揖霈⊥㺭?剁?憒�??�閬�?
       if (proxyRequest.is_generative && this.failureCount > 0) {
         this.logger.info(
-          `✅ [Auth] 非流式生成请求成功 - 失败计数已从 ${this.failureCount} 重置为 0`,
+          `??[Auth] ?墧?撘讐??鞱窈瘙�???- 憭梯揖霈⊥㺭撌脖? ${this.failureCount} ?滨蔭銝?0`,
         );
         this.failureCount = 0;
       }
 
-      // [核心修正] 对Google原生格式的响应进行智能图片处理
+      // [?詨?靽格迤] 撖逼oogle?毺??澆??�?摨磰?銵峕惣?賢㦛?�???
       try {
         let parsedBody = JSON.parse(fullBody);
         let needsReserialization = false;
@@ -2301,30 +2305,30 @@ class RequestHandler {
 
           if (imagePartIndex > -1) {
             this.logger.info(
-              "[Proxy] 检测到Google格式响应中的图片数据，正在转换为Markdown...",
+              "[Proxy] 璉�瘚见�Google?澆??滚?銝剔??曄??唳旿嚗峕迤?刻蓮?Ｖ蛹Markdown...",
             );
             const imagePart = candidate.content.parts[imagePartIndex];
             const image = imagePart.inlineData;
 
-            // 创建一个新的 text part 来替换原来的 inlineData part
+            // ?𥕦遣銝�銝芣鰵??text part ?交𤜯?Ｗ??亦? inlineData part
             const markdownTextPart = {
               text: `![Generated Image](data:${image.mimeType};base64,${image.data})`,
             };
 
-            // 替换掉原来的部分
+            // ?踵揢?匧??亦??典?
             candidate.content.parts[imagePartIndex] = markdownTextPart;
             needsReserialization = true;
           }
         }
 
         if (needsReserialization) {
-          fullBody = JSON.stringify(parsedBody); // 如果处理了图片，重新序列化
+          fullBody = JSON.stringify(parsedBody); // 憒�?憭�?鈭�㦛?�??齿鰵摨誩???
         }
       } catch (e) {
         this.logger.warn(
-          `[Proxy] 响应体不是有效的JSON，或在处理图片时出错: ${e.message}`,
+          `[Proxy] ?滚?雿㮖??舀??�?JSON嚗峕??典??�㦛?�𧒄?粹?: ${e.message}`,
         );
-        // 如果出错，则什么都不做，直接发送原始的 fullBody
+        // 憒�??粹?嚗�?隞�銋��銝滚?嚗𣬚凒?亙??�?憪讠? fullBody
       }
 
       try {
@@ -2332,12 +2336,11 @@ class RequestHandler {
         const finishReason =
           fullResponse.candidates?.[0]?.finishReason || "UNKNOWN";
         this.logger.info(
-          `✅ [Request] 响应结束，原因: ${finishReason}，请求ID: ${proxyRequest.request_id}`,
+          `??[Request] ?滚?蝏𤘪?嚗�??? ${finishReason}嚗諹窈瘙�D: ${proxyRequest.request_id}`,
         );
       } catch (e) {}
 
-      // 4. 设置正确的JSON响应头，并一次性发送处理过的全部数据
-      if (res.headersSent) {
+      // 4. 霈曄蔭甇?＆?�SON?滚?憭湛?撟嗡?甈⊥�批??�??�??��?冽㺭??      if (res.headersSent) {
           res.write(fullBody || "{}");
           res.end();
       } else {
@@ -2347,7 +2350,7 @@ class RequestHandler {
             .send(fullBody || "{}");
       }
 
-      this.logger.info(`[Request] 已向客户端发送完整的非流式响应。`);
+      this.logger.info(`[Request] 撌脣?摰Ｘ�蝡臬??�??渡??墧?撘誩?摨𢛵��);
     } catch (error) {
       this._handleRequestError(error, res);
     }
@@ -2392,28 +2395,28 @@ class RequestHandler {
   }
   _handleRequestError(error, res) {
     if (res.headersSent) {
-      this.logger.error(`[Request] 请求处理错误 (头已发送): ${error.message}`);
+      this.logger.error(`[Request] 霂瑟?憭�??躰秤 (憭游歇?煾�?: ${error.message}`);
       if (this.serverSystem.streamingMode === "fake")
-        this._sendErrorChunkToClient(res, `处理失败: ${error.message}`);
+        this._sendErrorChunkToClient(res, `憭�?憭梯揖: ${error.message}`);
       if (!res.writableEnded) res.end();
     } else {
-      this.logger.error(`[Request] 请求处理错误: ${error.message}`);
-      const status = error.message.includes("超时") ? 504 : 500;
-      this._sendErrorResponse(res, status, `代理错误: ${error.message}`);
+      this.logger.error(`[Request] 霂瑟?憭�??躰秤: ${error.message}`);
+      const status = error.message.includes("頞�𧒄") ? 504 : 500;
+      this._sendErrorResponse(res, status, `隞???躰秤: ${error.message}`);
     }
   }
 
   _sendErrorResponse(res, status, message) {
     if (!res.headersSent) {
-      // 1. 创建一个符合API规范的JSON错误对象
+      // 1. ?𥕦遣銝�銝芰泵?㇁PI閫�??�SON?躰秤撖寡情
       const errorPayload = {
         error: {
           code: status || 500,
           message: message,
-          status: "SERVICE_UNAVAILABLE", // 这是一个示例状态名
+          status: "SERVICE_UNAVAILABLE", // 餈蹱糓銝�銝芰內靘讠𠶖?�?
         },
       };
-      // 2. 设置响应类型为 application/json 并发送
+      // 2. 霈曄蔭?滚?蝐餃?銝?application/json 撟嗅???
       res
         .status(status || 500)
         .type("application/json")
@@ -2422,43 +2425,43 @@ class RequestHandler {
   }
 
   _translateOpenAIToGoogle(openaiBody, modelName = "") {
-    this.logger.info("[Adapter] 开始将OpenAI请求格式翻译为Google格式...");
+    this.logger.info("[Adapter] 撘�憪见?OpenAI霂瑟??澆?蝧餉?銝慘oogle?澆?...");
 
     let systemInstruction = null;
     const googleContents = [];
 
-    // 1. 分离出 system 指令
+    // 1. ?�氖??system ?�誘
     const systemMessages = openaiBody.messages.filter(
       (msg) => msg.role === "system",
     );
     if (systemMessages.length > 0) {
-      // 将所有 system message 的内容合并
+      // 撠�???system message ?�?摰孵?撟?
       const systemContent = systemMessages.map((msg) => msg.content).join("\n");
       systemInstruction = {
-        // Google Gemini 1.5 Pro 开始正式支持 system instruction
+        // Google Gemini 1.5 Pro 撘�憪𧢲迤撘𤩺𣈲??system instruction
         role: "system",
         parts: [{ text: systemContent }],
       };
     }
 
-    // 2. 转换 user 和 assistant 消息
+    // 2. 頧祆揢 user ??assistant 瘨��
     const conversationMessages = openaiBody.messages.filter(
       (msg) => msg.role !== "system",
     );
     for (const message of conversationMessages) {
       const googleParts = [];
 
-      // [核心改进] 判断 content 是字符串还是数组
+      // [?詨??寡?] ?斗鱏 content ?臬?蝚虫葡餈䀹糓?啁?
       if (typeof message.content === "string") {
-        // a. 如果是纯文本
+        // a. 憒�??舐滲?�𧋦
         googleParts.push({ text: message.content });
       } else if (Array.isArray(message.content)) {
-        // b. 如果是图文混合内容
+        // b. 憒�??臬㦛?�毽?�?摰?
         for (const part of message.content) {
           if (part.type === "text") {
             googleParts.push({ text: part.text });
           } else if (part.type === "image_url" && part.image_url) {
-            // 从 data URL 中提取 mimetype 和 base64 数据
+            // 隞?data URL 銝剜???mimetype ??base64 ?唳旿
             const dataUrl = part.image_url.url;
             const match = dataUrl.match(/^data:(image\/.*?);base64,(.*)$/);
             if (match) {
@@ -2479,7 +2482,7 @@ class RequestHandler {
       });
     }
 
-    // 3. 构建最终的Google请求体
+    // 3. ?�遣?�蝏�?Google霂瑟?雿?
     const googleRequest = {
       contents: googleContents,
       ...(systemInstruction && {
@@ -2487,7 +2490,7 @@ class RequestHandler {
       }),
     };
 
-    // 4. 转换生成参数
+    // 4. 頧祆揢?�??�㺭
     const generationConfig = {
       temperature: openaiBody.temperature,
       topP: openaiBody.top_p,
@@ -2508,17 +2511,17 @@ class RequestHandler {
     let thinkingConfig = null;
 
     if (rawThinkingConfig) {
-      // 2. 格式清洗：将 snake_case (下划线) 转换为 camelCase (驼峰)
+      // 2. ?澆?皜�?嚗𡁜? snake_case (銝见?蝥? 頧祆揢銝?camelCase (撽澆陸)
       thinkingConfig = {};
 
-      // 处理开关
+      // 憭�?撘�??
       if (rawThinkingConfig.include_thoughts !== undefined) {
         thinkingConfig.includeThoughts = rawThinkingConfig.include_thoughts;
       } else if (rawThinkingConfig.includeThoughts !== undefined) {
         thinkingConfig.includeThoughts = rawThinkingConfig.includeThoughts;
       }
 
-      // 处理 Budget (预算)
+      // 憭�? Budget (憸�?)
       // if (rawThinkingConfig.thinking_budget !== undefined) {
       // thinkingConfig.thinkingBudgetTokenLimit =
       // rawThinkingConfig.thinking_budget;
@@ -2528,37 +2531,37 @@ class RequestHandler {
       //}
 
       this.logger.info(
-        `[Adapter] 成功提取并转换推理配置: ${JSON.stringify(thinkingConfig)}`,
+        `[Adapter] ?𣂼??𣂼?撟嗉蓮?Ｘ綫?�?蝵? ${JSON.stringify(thinkingConfig)}`,
       );
     }
 
-    // 3. 如果没找到配置，尝试识别 OpenAI 标准参数 'reasoning_effort'
+    // 3. 憒�?瘝⊥𪄳?圈?蝵殷?撠肽?霂�� OpenAI ?�??�㺭 'reasoning_effort'
     if (!thinkingConfig) {
       const effort = openaiBody.reasoning_effort || extraBody.reasoning_effort;
       if (effort) {
         this.logger.info(
-          `[Adapter] 检测到 OpenAI 标准推理参数 (reasoning_effort: ${effort})，自动转换为 Google 格式。`,
+          `[Adapter] 璉�瘚见� OpenAI ?�??函??�㺭 (reasoning_effort: ${effort})嚗諹䌊?刻蓮?Ｖ蛹 Google ?澆??�,
         );
         thinkingConfig = { includeThoughts: true };
       }
     }
 
-    // 4. 强制开启逻辑 (WebUI开关)
+    // 4. 撘箏�撘�?舫�餉? (WebUI撘�??
     if (this.serverSystem.forceThinking && !thinkingConfig) {
       this.logger.info(
-        "[Adapter] ⚠️ 强制推理已启用，且客户端未提供配置，正在注入 thinkingConfig...",
+        "[Adapter] ?𩤃? 撘箏�?函?撌脣鍳?剁?銝𥪜恥?瑞垢?芣?靘偦?蝵殷?甇?銁瘜典� thinkingConfig...",
       );
       thinkingConfig = { includeThoughts: true };
     }
 
-    // 5. 写入最终配置
+    // 5. ?坔�?�蝏�?蝵?
     if (thinkingConfig) {
       generationConfig.thinkingConfig = thinkingConfig;
     }
 
     googleRequest.generationConfig = generationConfig;
 
-    // 5. 安全设置
+    // 5. 摰匧�霈曄蔭
     googleRequest.safetySettings = [
       { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
       { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
@@ -2566,7 +2569,7 @@ class RequestHandler {
       { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" },
     ];
 
-    this.logger.info("[Adapter] 翻译完成。");
+    this.logger.info("[Adapter] 蝧餉?摰峕???);
     return googleRequest;
   }
 
@@ -2586,7 +2589,7 @@ class RequestHandler {
     try {
       googleResponse = JSON.parse(jsonString);
     } catch (e) {
-      this.logger.warn(`[Adapter] 无法解析Google返回的JSON块: ${jsonString}`);
+      this.logger.warn(`[Adapter] ?䭾?閫??Google餈𥪜??�SON?? ${jsonString}`);
       return null;
     }
 
@@ -2594,7 +2597,7 @@ class RequestHandler {
     if (!candidate) {
       if (googleResponse.promptFeedback) {
         this.logger.warn(
-          `[Adapter] Google返回了promptFeedback，可能已被拦截: ${JSON.stringify(
+          `[Adapter] Google餈𥪜?鈭�romptFeedback嚗�虾?賢歇鋡急㜃?? ${JSON.stringify(
             googleResponse.promptFeedback,
           )}`,
         );
@@ -2620,14 +2623,14 @@ class RequestHandler {
       if (imagePart) {
         const image = imagePart.inlineData;
         delta.content = `![Generated Image](data:${image.mimeType};base64,${image.data})`;
-        this.logger.info("[Adapter] 从流式响应块中成功解析到图片。");
+        this.logger.info("[Adapter] 隞擧?撘誩?摨𥪜?銝剜??蠘圾?𣂼�?曄???);
       } else {
-        // 遍历所有部分，分离思考内容和正文内容
+        // ?滚??�?厰�?�??�氖?肽��?摰孵?甇???�捆
         let contentAccumulator = "";
         let reasoningAccumulator = "";
 
         for (const part of candidate.content.parts) {
-          // Google API 的 thought 标记
+          // Google API ??thought ?�扇
           if (part.thought === true) {
             reasoningAccumulator += part.text || "";
           } else {
@@ -2635,7 +2638,7 @@ class RequestHandler {
           }
         }
 
-        // 只有当有内容时才添加到 delta 中
+        // ?芣?敶𤘪??�捆?嗆?瘛餃???delta 銝?
         if (reasoningAccumulator) {
           delta.reasoning_content = reasoningAccumulator;
         }
@@ -2645,7 +2648,7 @@ class RequestHandler {
       }
     }
 
-    // 如果没有任何内容变更，则不返回数据（避免空行）
+    // 憒�?瘝⊥?隞颱??�捆?䀹凒嚗�?銝滩??墧㺭?殷??踹?蝛箄?嚗?
     if (!delta.content && !delta.reasoning_content && !candidate.finishReason) {
       return null;
     }
@@ -2658,7 +2661,7 @@ class RequestHandler {
       choices: [
         {
           index: 0,
-          delta: delta, // 使用包含 reasoning_content 的 delta
+          delta: delta, // 雿輻鍂?�鉄 reasoning_content ??delta
           finish_reason: candidate.finishReason || null,
         },
       ],
@@ -2672,7 +2675,7 @@ class ProxyServerSystem extends EventEmitter {
   constructor() {
     super();
     this.logger = new LoggingService("ProxySystem");
-    this._loadConfiguration(); // 这个函数会执行下面的_loadConfiguration
+    this._loadConfiguration(); // 餈嗘葵?賣㺭隡𡁏�銵䔶??Ｙ?_loadConfiguration
     this.streamingMode = this.config.streamingMode;
 
     this.forceThinking = false;
@@ -2697,7 +2700,7 @@ class ProxyServerSystem extends EventEmitter {
     this.wsServer = null;
   }
 
-  // ===== 所有函数都已正确放置在类内部 =====
+  // ===== ?�?匧遆?圈�撌脫迤蝖格𦆮蝵桀銁蝐餃???=====
 
   _loadConfiguration() {
     let config = {
@@ -2712,8 +2715,8 @@ class ProxyServerSystem extends EventEmitter {
       browserExecutablePath: null,
       apiKeys: [],
       immediateSwitchStatusCodes: [429, 503],
-      // [新增] 用于追踪API密钥来源
-      apiKeySource: "未设置",
+      // [?啣?] ?其?餈質葵API撖�𤨎?交?
+      apiKeySource: "?芾挽蝵?,
       targetUrl: "https://ai.studio/apps/59d6e5ae-e3bb-494d-b942-2da1adab2ba0",
     };
 
@@ -2722,10 +2725,10 @@ class ProxyServerSystem extends EventEmitter {
       if (fs.existsSync(configPath)) {
         const fileConfig = JSON.parse(fs.readFileSync(configPath, "utf-8"));
         config = { ...config, ...fileConfig };
-        this.logger.info("[System] 已从 config.json 加载配置。");
+        this.logger.info("[System] 撌脖? config.json ?㰘蝸?滨蔭??);
       }
     } catch (error) {
-      this.logger.warn(`[System] 无法读取或解析 config.json: ${error.message}`);
+      this.logger.warn(`[System] ?䭾?霂餃??𤥁圾??config.json: ${error.message}`);
     }
 
     if (process.env.PORT)
@@ -2753,7 +2756,7 @@ class ProxyServerSystem extends EventEmitter {
     }
 
     let rawCodes = process.env.IMMEDIATE_SWITCH_STATUS_CODES;
-    let codesSource = "环境变量";
+    let codesSource = "?臬??㗛?";
 
     if (
       !rawCodes &&
@@ -2761,7 +2764,7 @@ class ProxyServerSystem extends EventEmitter {
       Array.isArray(config.immediateSwitchStatusCodes)
     ) {
       rawCodes = config.immediateSwitchStatusCodes.join(",");
-      codesSource = "config.json 文件或默认值";
+      codesSource = "config.json ?�辣?㚚?霈文�?;
     }
 
     if (rawCodes && typeof rawCodes === "string") {
@@ -2770,7 +2773,7 @@ class ProxyServerSystem extends EventEmitter {
         .map((code) => parseInt(String(code).trim(), 10))
         .filter((code) => !isNaN(code) && code >= 400 && code <= 599);
       if (config.immediateSwitchStatusCodes.length > 0) {
-        this.logger.info(`[System] 已从 ${codesSource} 加载“立即切换报错码”。`);
+        this.logger.info(`[System] 撌脖? ${codesSource} ?㰘蝸?𦦵??喳??Ｘ𥁒?嗵??腈��);
       }
     } else {
       config.immediateSwitchStatusCodes = [];
@@ -2784,108 +2787,108 @@ class ProxyServerSystem extends EventEmitter {
       config.apiKeys = [];
     }
 
-    // [修改] 更新API密钥来源的判断逻辑
+    // [靽格㺿] ?湔鰵API撖�𤨎?交??�ế?剝�餉?
     if (config.apiKeys.length > 0) {
-      config.apiKeySource = "自定义";
+      config.apiKeySource = "?芸?銋?;
     } else {
       config.apiKeys = ["123456"];
-      config.apiKeySource = "默认";
-      this.logger.info("[System] 未设置任何API Key，已启用默认密码: 123456");
+      config.apiKeySource = "暺䁅恕";
+      this.logger.info("[System] ?芾挽蝵桐遙雿𧭈PI Key嚗�歇?舐鍂暺䁅恕撖�?: 123456");
     }
 
     const modelsPath = path.join(__dirname, "models.json");
     try {
       if (fs.existsSync(modelsPath)) {
         const modelsFileContent = fs.readFileSync(modelsPath, "utf-8");
-        config.modelList = JSON.parse(modelsFileContent); // 将读取到的模型列表存入config对象
+        config.modelList = JSON.parse(modelsFileContent); // 撠�粉?硋�?�芋?见?銵典??卉onfig撖寡情
         this.logger.info(
-          `[System] 已从 models.json 成功加载 ${config.modelList.length} 个模型。`,
+          `[System] 撌脖? models.json ?𣂼??㰘蝸 ${config.modelList.length} 銝芣芋?卝��,
         );
       } else {
         this.logger.warn(
-          `[System] 未找到 models.json 文件，将使用默认模型列表。`,
+          `[System] ?芣𪄳??models.json ?�辣嚗�?雿輻鍂暺䁅恕璅∪??𡑒”?�,
         );
-        config.modelList = ["gemini-1.5-pro-latest"]; // 提供一个备用模型，防止服务启动失败
+        config.modelList = ["gemini-1.5-pro-latest"]; // ?𣂷?銝�銝芸??冽芋?页??脫迫?滚𦛚?臬𢆡憭梯揖
       }
     } catch (error) {
       this.logger.error(
-        `[System] 读取或解析 models.json 失败: ${error.message}，将使用默认模型列表。`,
+        `[System] 霂餃??𤥁圾??models.json 憭梯揖: ${error.message}嚗�?雿輻鍂暺䁅恕璅∪??𡑒”?�,
       );
-      config.modelList = ["gemini-1.5-pro-latest"]; // 出错时也使用备用模型
+      config.modelList = ["gemini-1.5-pro-latest"]; // ?粹??嗡?雿輻鍂憭�鍂璅∪?
     }
 
     this.config = config;
-    this.logger.info("================ [ 生效配置 ] ================");
-    this.logger.info(`  HTTP 服务端口: ${this.config.httpPort}`);
-    this.logger.info(`  监听地址: ${this.config.host}`);
-    this.logger.info(`  流式模式: ${this.config.streamingMode}`);
+    this.logger.info("================ [ ?�??滨蔭 ] ================");
+    this.logger.info(`  HTTP ?滚𦛚蝡臬藁: ${this.config.httpPort}`);
+    this.logger.info(`  ?穃𨯬?啣?: ${this.config.host}`);
+    this.logger.info(`  瘚�?璅∪?: ${this.config.streamingMode}`);
     this.logger.info(
-      `  轮换计数切换阈值: ${
+      `  頧格揢霈⊥㺭?�揢?��? ${
         this.config.switchOnUses > 0
-          ? `每 ${this.config.switchOnUses} 次请求后切换`
-          : "已禁用"
+          ? `瘥?${this.config.switchOnUses} 甈∟窈瘙�??�揢`
+          : "撌脩???
       }`,
     );
     this.logger.info(
-      `  失败计数切换: ${
+      `  憭梯揖霈⊥㺭?�揢: ${
         this.config.failureThreshold > 0
-          ? `失败${this.config.failureThreshold} 次后切换`
-          : "已禁用"
+          ? `憭梯揖${this.config.failureThreshold} 甈∪??�揢`
+          : "撌脩???
       }`,
     );
     this.logger.info(
-      `  立即切换报错码: ${
+      `  蝡见朖?�揢?仿??? ${
         this.config.immediateSwitchStatusCodes.length > 0
           ? this.config.immediateSwitchStatusCodes.join(", ")
-          : "已禁用"
+          : "撌脩???
       }`,
     );
-    this.logger.info(`  单次请求最大重试: ${this.config.maxRetries}次`);
-    this.logger.info(`  重试间隔: ${this.config.retryDelay}ms`);
-    this.logger.info(`  API 密钥来源: ${this.config.apiKeySource}`); // 在启动日志中也显示出来
+    this.logger.info(`  ?閙活霂瑟??�憭折?霂? ${this.config.maxRetries}甈︶);
+    this.logger.info(`  ?滩??湧?: ${this.config.retryDelay}ms`);
+    this.logger.info(`  API 撖�𤨎?交?: ${this.config.apiKeySource}`); // ?典鍳?冽𠯫敹𦯀葉銋�遬蝷箏枂??
     this.logger.info(
       "=============================================================",
     );
   }
 
   async start(initialAuthIndex = null) {
-    this.logger.info("[System] 开始弹性启动流程...");
+    this.logger.info("[System] 撘�憪见撕?批鍳?冽?蝔?..");
     const allAvailableIndices = this.authSource.availableIndices;
 
     if (allAvailableIndices.length === 0) {
-      throw new Error("没有任何可用的认证源，无法启动。");
+      throw new Error("瘝⊥?隞颱??舐鍂?�恕霂�?嚗峕?瘜訫鍳?具�?);
     }
 
     let startupOrder = [...allAvailableIndices];
     if (initialAuthIndex && allAvailableIndices.includes(initialAuthIndex)) {
-      this.logger.info(`[System] 检测到指定启动索引 #${initialAuthIndex}，将优先尝试。`);
+      this.logger.info(`[System] 璉�瘚见�?�??臬𢆡蝝Ｗ? #${initialAuthIndex}嚗�?隡睃?撠肽??�);
       startupOrder = [
         initialAuthIndex,
         ...allAvailableIndices.filter((i) => i !== initialAuthIndex),
       ];
     } else {
       if (initialAuthIndex) {
-        this.logger.warn(`[System] 指定的启动索引 #${initialAuthIndex} 无效或不可用，将按默认顺序启动。`);
+        this.logger.warn(`[System] ?�??�鍳?函揣撘?#${initialAuthIndex} ?䭾??碶??舐鍂嚗�??厰?霈日◇摨誩鍳?具��);
       }
-      this.logger.info(`[System] 未指定有效启动索引，将按默认顺序 [${startupOrder.join(", ")}] 尝试。`);
+      this.logger.info(`[System] ?芣?摰𡁏??�鍳?函揣撘𤏪?撠�?暺䁅恕憿箏? [${startupOrder.join(", ")}] 撠肽??�);
     }
 
 
     let isStarted = false;
-    this.logger.info("[System] 准备加载浏览器环境...");
+    this.logger.info("[System] ?�??㰘蝸瘚讛??函㴓憓?..");
 
-    // 使用 UI 锁防止在启动期间有请求并发触发浏览器重启
+    // 雿輻鍂 UI ?�俈甇Ｗ銁?臬𢆡?罸𡢿?㕑窈瘙�僎?𤏸圻?烐?閫�膥?滚鍳
     const unlock = await this.browserManager._acquireUiLock();
     try {
       for (const index of startupOrder) {
         try {
-          this.logger.info(`[System] 尝试使用账号 #${index} 启动服务...`);
+          this.logger.info(`[System] 撠肽?雿輻鍂韐血噡 #${index} ?臬𢆡?滚𦛚...`);
           await this.browserManager.launchOrSwitchContext(index);
           isStarted = true;
-          this.logger.info(`[System] ✅ 使用账号 #${index} 成功启动！`);
+          this.logger.info(`[System] ??雿輻鍂韐血噡 #${index} ?𣂼??臬𢆡嚗�);
           break;
         } catch (error) {
-          this.logger.error(`[System] ❌ 使用账号 #${index} 启动失败。原因: ${error.message}`);
+          this.logger.error(`[System] ??雿輻鍂韐血噡 #${index} ?臬𢆡憭梯揖?�??? ${error.message}`);
         }
       }
     } finally {
@@ -2893,19 +2896,19 @@ class ProxyServerSystem extends EventEmitter {
     }
 
     if (!isStarted) {
-      throw new Error("所有认证源均尝试失败，服务器无法启动。");
+      throw new Error("?�?㕑恕霂�??�?霂訫仃韐伐??滚𦛚?冽?瘜訫鍳?具�?);
     }
 
-    this.logger.info("[System] 浏览器环境已就绪，正在启动 HTTP/WS 服务器接收外部请求...");
+    this.logger.info("[System] 瘚讛??函㴓憓�歇撠梁貌嚗峕迤?典鍳??HTTP/WS ?滚𦛚?冽𦻖?嗅??刻窈瘙?..");
     await this._startHttpServer();
     await this._startWebSocketServer();
 
-    this.logger.info(`[System] 代理服务器系统完全启动完成。`);
+    this.logger.info(`[System] 隞???滚𦛚?函頂蝏笔??典鍳?典??僐��);
     this.emit("started");
   }
 
   _createAuthMiddleware() {
-    const basicAuth = require("basic-auth"); // 确保此行存在，为admin认证提供支持
+    const basicAuth = require("basic-auth"); // 蝖桐?甇方?摮睃銁嚗䔶蛹admin霈方??𣂷??舀?
 
     return (req, res, next) => {
       const serverApiKeys = this.config.apiKeys;
@@ -2929,7 +2932,7 @@ class ProxyServerSystem extends EventEmitter {
 
       if (clientKey && serverApiKeys.includes(clientKey)) {
         this.logger.info(
-          `[Auth] API Key验证通过 (来自: ${
+          `[Auth] API Key撉諹??朞? (?亥䌊: ${
             req.headers["x-forwarded-for"] || req.ip
           })`,
         );
@@ -2939,12 +2942,12 @@ class ProxyServerSystem extends EventEmitter {
         return next();
       }
 
-      // 对于没有有效API Key的请求，返回401错误
-      // 注意：健康检查等逻辑已在_createExpressApp中提前处理
+      // 撖嫣?瘝⊥??㗇?API Key?�窈瘙�?餈𥪜?401?躰秤
+      // 瘜冽?嚗𡁜�摨瑟??亦??餉?撌脣銁_createExpressApp銝剜??滚???
       if (req.path !== "/favicon.ico") {
         const clientIp = req.headers["x-forwarded-for"] || req.ip;
         this.logger.warn(
-          `[Auth] 访问密码错误或缺失，已拒绝请求。IP: ${clientIp}, Path: ${req.path}`,
+          `[Auth] 霈輸䔮撖�??躰秤?𣇉撩憭梧?撌脫?蝏肽窈瘙���P: ${clientIp}, Path: ${req.path}`,
         );
       }
 
@@ -2968,12 +2971,12 @@ class ProxyServerSystem extends EventEmitter {
     return new Promise((resolve) => {
       this.httpServer.listen(this.config.httpPort, this.config.host, () => {
         this.logger.info(
-          `[System] HTTP服务器已在 http://${this.config.host}:${this.config.httpPort} 上监听`,
+          `[System] HTTP?滚𦛚?典歇??http://${this.config.host}:${this.config.httpPort} 銝羓??柄,
         );
         this.logger.info(
-          `[System] Keep-Alive 超时已设置为 ${
+          `[System] Keep-Alive 頞�𧒄撌脰挽蝵桐蛹 ${
             this.httpServer.keepAliveTimeout / 1000
-          } 秒。`,
+          } 蝘鉝��,
         );
         resolve();
       });
@@ -3007,7 +3010,7 @@ class ProxyServerSystem extends EventEmitter {
         req.path !== "/login"
       ) {
         this.logger.info(
-          `[Entrypoint] 收到一个请求: ${req.method} ${req.path}`,
+          `[Entrypoint] ?嗅�銝�銝芾窈瘙? ${req.method} ${req.path}`,
         );
       }
       next();
@@ -3016,7 +3019,7 @@ class ProxyServerSystem extends EventEmitter {
     app.use(express.urlencoded({ extended: true }));
 
     const sessionSecret =
-      // Section 1 & 2 (核心中间件和登录路由) 保持不变...
+      // Section 1 & 2 (?詨?銝剝𡢿隞嗅??餃?頝舐眏) 靽脲?銝滚?...
       (this.config.apiKeys && this.config.apiKeys[0]) ||
       crypto.randomBytes(20).toString("hex");
     app.use(cookieParser());
@@ -3039,12 +3042,12 @@ class ProxyServerSystem extends EventEmitter {
         return res.redirect("/");
       }
       const loginHtml = `
-      <!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><title>登录</title>
+      <!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><title>?餃?</title>
       <style>body{display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;background:#f0f2f5}form{background:white;padding:40px;border-radius:10px;box-shadow:0 4px 8px rgba(0,0,0,0.1);text-align:center}input{width:250px;padding:10px;margin-top:10px;border:1px solid #ccc;border-radius:5px}button{width:100%;padding:10px;background-color:#007bff;color:white;border:none;border-radius:5px;margin-top:20px;cursor:pointer}.error{color:red;margin-top:10px}</style>
-      </head><body><form action="/login" method="post"><h2>请输入 API Key</h2>
-      <input type="password" name="apiKey" placeholder="API Key" required autofocus><button type="submit">登录</button>
+      </head><body><form action="/login" method="post"><h2>霂瑁???API Key</h2>
+      <input type="password" name="apiKey" placeholder="API Key" required autofocus><button type="submit">?餃?</button>
       ${
-        req.query.error ? '<p class="error">API Key 错误!</p>' : ""
+        req.query.error ? '<p class="error">API Key ?躰秤!</p>' : ""
       }</form></body></html>`;
       res.send(loginHtml);
     });
@@ -3059,7 +3062,7 @@ class ProxyServerSystem extends EventEmitter {
     });
 
     // ==========================================================
-    // Section 3: 状态页面 和 API (最终版)
+    // Section 3: ?嗆��△????API (?�蝏�?)
     // ==========================================================
     app.get("/", isAuthenticated, (req, res) => {
       const { config, requestHandler, authSource, browserManager } = this;
@@ -3075,14 +3078,14 @@ class ProxyServerSystem extends EventEmitter {
         .map((index) => {
           const isInvalid = invalidIndices.includes(index);
           const name = isInvalid
-            ? "N/A (JSON格式错误)"
-            : accountNameMap.get(index) || "N/A (未命名)";
-          return `<span class="label" style="padding-left: 20px;">账号${index}</span>: ${name}`;
+            ? "N/A (JSON?澆??躰秤)"
+            : accountNameMap.get(index) || "N/A (?芸𦶢??";
+          return `<span class="label" style="padding-left: 20px;">韐血噡${index}</span>: ${name}`;
         })
         .join("\n");
 
       const accountOptionsHtml = availableIndices
-        .map((index) => `<option value="${index}">账号 #${index}</option>`)
+        .map((index) => `<option value="${index}">韐血噡 #${index}</option>`)
         .join("");
 
       const statusHtml = `
@@ -3091,7 +3094,7 @@ class ProxyServerSystem extends EventEmitter {
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>代理服务状态</title>
+        <title>隞???滚𦛚?嗆�?/title>
         <style>
         body { font-family: 'SF Mono', 'Consolas', 'Menlo', monospace; background-color: #f0f2f5; color: #333; padding: 2em; }
         .container { max-width: 800px; margin: 0 auto; background: #fff; padding: 1em 2em 2em 2em; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
@@ -3120,54 +3123,54 @@ class ProxyServerSystem extends EventEmitter {
     </head>
     <body>
         <div class="container">
-        <h1>代理服务状态 <span class="dot" title="数据动态刷新中..."></span></h1>
+        <h1>隞???滚𦛚?嗆�?<span class="dot" title="?唳旿?冽���?唬葉..."></span></h1>
         <div id="status-section">
             <pre>
-<span class="label">服务状态</span>: <span class="status-ok">Running</span>
-<span class="label">浏览器连接</span>: <span class="${
+<span class="label">?滚𦛚?嗆�?/span>: <span class="status-ok">Running</span>
+<span class="label">瘚讛??刻???/span>: <span class="${
         browserManager.browser ? "status-ok" : "status-error"
       }">${!!browserManager.browser}</span>
---- 服务配置 ---
-<span class="label">流模式</span>: ${
+--- ?滚𦛚?滨蔭 ---
+<span class="label">瘚�芋撘?/span>: ${
         config.streamingMode
-      } (仅启用流式传输时生效)
-<span class="label">强制推理</span>: ${
-        this.forceThinking ? "✅ 已启用" : "❌ 已关闭"
+      } (隞�鍳?冽?撘譍?颲𤘪𧒄?�?)
+<span class="label">撘箏�?函?</span>: ${
+        this.forceThinking ? "??撌脣鍳?? : "??撌脣�??
       }
-<span class="label">立即切换 (状态码)</span>: ${
+<span class="label">蝡见朖?�揢 (?嗆��?)</span>: ${
         config.immediateSwitchStatusCodes.length > 0
           ? `[${config.immediateSwitchStatusCodes.join(", ")}]`
-          : "已禁用"
+          : "撌脩???
       }
-<span class="label">API 密钥</span>: ${config.apiKeySource}
---- 账号状态 ---
-<span class="label">当前使用账号</span>: #${requestHandler.currentAuthIndex}
-<span class="label">使用次数计数</span>: ${requestHandler.usageCount} / ${
+<span class="label">API 撖�𤨎</span>: ${config.apiKeySource}
+--- 韐血噡?嗆�?---
+<span class="label">敶枏?雿輻鍂韐血噡</span>: #${requestHandler.currentAuthIndex}
+<span class="label">雿輻鍂甈⊥㺭霈⊥㺭</span>: ${requestHandler.usageCount} / ${
         config.switchOnUses > 0 ? config.switchOnUses : "N/A"
       }
-<span class="label">连续失败计数</span>: ${requestHandler.failureCount} / ${
+<span class="label">餈䂿賒憭梯揖霈⊥㺭</span>: ${requestHandler.failureCount} / ${
         config.failureThreshold > 0 ? config.failureThreshold : "N/A"
       }
-<span class="label">扫描到的总帐号</span>: [${initialIndices.join(
+<span class="label">?急??啁??餃???/span>: [${initialIndices.join(
         ", ",
-      )}] (总数: ${initialIndices.length})
+      )}] (?餅㺭: ${initialIndices.length})
       ${accountDetailsHtml}
-<span class="label">格式错误 (已忽略)</span>: [${invalidIndices.join(
+<span class="label">?澆??躰秤 (撌脣蕭??</span>: [${invalidIndices.join(
         ", ",
-      )}] (总数: ${invalidIndices.length})
+      )}] (?餅㺭: ${invalidIndices.length})
             </pre>
         </div>
         <div id="actions-section" style="margin-top: 2em;">
-            <h2>操作面板</h2>
+            <h2>?滢??Ｘ踎</h2>
             <div class="action-group">
                 <select id="accountIndexSelect">${accountOptionsHtml}</select>
-                <button onclick="switchSpecificAccount()">切换账号</button>
-                <button onclick="toggleStreamingMode()">切换流模式</button>
-                <button onclick="toggleForceThinking()">切换强制推理</button>
+                <button onclick="switchSpecificAccount()">?�揢韐血噡</button>
+                <button onclick="toggleStreamingMode()">?�揢瘚�芋撘?/button>
+                <button onclick="toggleForceThinking()">?�揢撘箏�?函?</button>
             </div>
         </div>
         <div id="log-section" style="margin-top: 2em;">
-            <h2>实时日志 (最近 ${logs.length} 条)</h2>
+            <h2>摰墧𧒄?亙? (?�餈?${logs.length} ??</h2>
             <pre id="log-container">${logs.join("\n")}</pre>
         </div>
         </div>
@@ -3176,28 +3179,28 @@ class ProxyServerSystem extends EventEmitter {
             fetch('/api/status').then(response => response.json()).then(data => {
                 const statusPre = document.querySelector('#status-section pre');
                 const accountDetailsHtml = data.status.accountDetails.map(acc => {
-                  return '<span class="label" style="padding-left: 20px;">账号' + acc.index + '</span>: ' + acc.name;
+                  return '<span class="label" style="padding-left: 20px;">韐血噡' + acc.index + '</span>: ' + acc.name;
                 }).join('\\n');
                 statusPre.innerHTML = 
-                    '<span class="label">服务状态</span>: <span class="status-ok">Running</span>\\n' +
-                    '<span class="label">浏览器连接</span>: <span class="' + (data.status.browserConnected ? "status-ok" : "status-error") + '">' + data.status.browserConnected + '</span>\\n' +
-                    '--- 服务配置 ---\\n' +
-                    '<span class="label">流模式</span>: ' + data.status.streamingMode + '\\n' +
-                    '<span class="label">强制推理</span>: ' + data.status.forceThinking + '\\n' +
-                    '<span class="label">立即切换 (状态码)</span>: ' + data.status.immediateSwitchStatusCodes + '\\n' +
-                    '<span class="label">API 密钥</span>: ' + data.status.apiKeySource + '\\n' +
-                    '--- 账号状态 ---\\n' +
-                    '<span class="label">当前使用账号</span>: #' + data.status.currentAuthIndex + '\\n' +
-                    '<span class="label">使用次数计数</span>: ' + data.status.usageCount + '\\n' +
-                    '<span class="label">连续失败计数</span>: ' + data.status.failureCount + '\\n' +
-                    '<span class="label">扫描到的总账号</span>: ' + data.status.initialIndices + '\\n' +
+                    '<span class="label">?滚𦛚?嗆�?/span>: <span class="status-ok">Running</span>\\n' +
+                    '<span class="label">瘚讛??刻???/span>: <span class="' + (data.status.browserConnected ? "status-ok" : "status-error") + '">' + data.status.browserConnected + '</span>\\n' +
+                    '--- ?滚𦛚?滨蔭 ---\\n' +
+                    '<span class="label">瘚�芋撘?/span>: ' + data.status.streamingMode + '\\n' +
+                    '<span class="label">撘箏�?函?</span>: ' + data.status.forceThinking + '\\n' +
+                    '<span class="label">蝡见朖?�揢 (?嗆��?)</span>: ' + data.status.immediateSwitchStatusCodes + '\\n' +
+                    '<span class="label">API 撖�𤨎</span>: ' + data.status.apiKeySource + '\\n' +
+                    '--- 韐血噡?嗆�?---\\n' +
+                    '<span class="label">敶枏?雿輻鍂韐血噡</span>: #' + data.status.currentAuthIndex + '\\n' +
+                    '<span class="label">雿輻鍂甈⊥㺭霈⊥㺭</span>: ' + data.status.usageCount + '\\n' +
+                    '<span class="label">餈䂿賒憭梯揖霈⊥㺭</span>: ' + data.status.failureCount + '\\n' +
+                    '<span class="label">?急??啁??餉揭??/span>: ' + data.status.initialIndices + '\\n' +
                     accountDetailsHtml + '\\n' +
-                    '<span class="label">格式错误 (已忽略)</span>: ' + data.status.invalidIndices;
+                    '<span class="label">?澆??躰秤 (撌脣蕭??</span>: ' + data.status.invalidIndices;
                 
                 const logContainer = document.getElementById('log-container');
                 const logTitle = document.querySelector('#log-section h2');
                 const isScrolledToBottom = logContainer.scrollHeight - logContainer.clientHeight <= logContainer.scrollTop + 1;
-                logTitle.innerText = \`实时日志 (最近 \${data.logCount} 条)\`;
+                logTitle.innerText = \`摰墧𧒄?亙? (?�餈?\${data.logCount} ??\`;
                 logContainer.innerText = data.logs;
                 if (isScrolledToBottom) { logContainer.scrollTop = logContainer.scrollHeight; }
             }).catch(error => console.error('Error fetching new content:', error));
@@ -3206,7 +3209,7 @@ class ProxyServerSystem extends EventEmitter {
         function switchSpecificAccount() {
             const selectElement = document.getElementById('accountIndexSelect');
             const targetIndex = selectElement.value;
-            if (!confirm(\`确定要切换到账号 #\${targetIndex} 吗？这会重置浏览器会话。\`)) {
+            if (!confirm(\`蝖桀?閬�??Ｗ�韐血噡 #\${targetIndex} ?梹?餈嗘??滨蔭瘚讛??其?霂腈��`)) {
                 return;
             }
             fetch('/api/switch-account', {
@@ -3217,16 +3220,16 @@ class ProxyServerSystem extends EventEmitter {
             .then(res => res.text()).then(data => { alert(data); updateContent(); })
             .catch(err => { 
                 if (err.message.includes('Load failed') || err.message.includes('NetworkError')) {
-                    alert('⚠️ 浏览器启动较慢，操作仍在后台进行中。\\n\\n请不要重复点击。');
+                    alert('?𩤃? 瘚讛??典鍳?刻??ｇ??滢?隞滚銁?𤾸蝱餈𥡝?銝准��\n\\n霂瑚?閬�?憭滨�?颯�?);
                 } else {
-                    alert('❌ 操作失败: ' + err); 
+                    alert('???滢?憭梯揖: ' + err); 
                 }
                 updateContent(); 
             });
         }
             
         function toggleStreamingMode() { 
-            const newMode = prompt('请输入新的流模式 (real 或 fake):', '${
+            const newMode = prompt('霂瑁??交鰵?�?璅∪? (real ??fake):', '${
               this.config.streamingMode
             }');
             if (newMode === 'fake' || newMode === 'real') {
@@ -3236,9 +3239,9 @@ class ProxyServerSystem extends EventEmitter {
                     body: JSON.stringify({ mode: newMode }) 
                 })
                 .then(res => res.text()).then(data => { alert(data); updateContent(); })
-                .catch(err => alert('设置失败: ' + err));
+                .catch(err => alert('霈曄蔭憭梯揖: ' + err));
             } else if (newMode !== null) { 
-                alert('无效的模式！请只输入 "real" 或 "fake"。'); 
+                alert('?䭾??�芋撘𧶏?霂瑕蘨颲枏� "real" ??"fake"??); 
             } 
         }
 
@@ -3248,7 +3251,7 @@ class ProxyServerSystem extends EventEmitter {
                 headers: { 'Content-Type': 'application/json' }
             })
             .then(res => res.text()).then(data => { alert(data); updateContent(); })
-            .catch(err => alert('设置失败: ' + err));
+            .catch(err => alert('霈曄蔭憭梯揖: ' + err));
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -3317,20 +3320,20 @@ class ProxyServerSystem extends EventEmitter {
       const accountDetails = initialIndices.map((index) => {
         const isInvalid = invalidIndices.includes(index);
         const name = isInvalid
-          ? "N/A (JSON格式错误)"
-          : accountNameMap.get(index) || "N/A (未命名)";
+          ? "N/A (JSON?澆??躰秤)"
+          : accountNameMap.get(index) || "N/A (?芸𦶢??";
         return { index, name };
       });
 
       const data = {
         status: {
-          streamingMode: `${this.streamingMode} (仅启用流式传输时生效)`,
-          forceThinking: this.forceThinking ? "✅ 已启用" : "❌ 已关闭",
+          streamingMode: `${this.streamingMode} (隞�鍳?冽?撘譍?颲𤘪𧒄?�?)`,
+          forceThinking: this.forceThinking ? "??撌脣鍳?? : "??撌脣�??,
           browserConnected: !!browserManager.browser,
           immediateSwitchStatusCodes:
             config.immediateSwitchStatusCodes.length > 0
               ? `[${config.immediateSwitchStatusCodes.join(", ")}]`
-              : "已禁用",
+              : "撌脩???,
           apiKeySource: config.apiKeySource,
           currentAuthIndex: requestHandler.currentAuthIndex,
           usageCount: `${requestHandler.usageCount} / ${
@@ -3339,11 +3342,11 @@ class ProxyServerSystem extends EventEmitter {
           failureCount: `${requestHandler.failureCount} / ${
             config.failureThreshold > 0 ? config.failureThreshold : "N/A"
           }`,
-          initialIndices: `[${initialIndices.join(", ")}] (总数: ${
+          initialIndices: `[${initialIndices.join(", ")}] (?餅㺭: ${
             initialIndices.length
           })`,
           accountDetails: accountDetails,
-          invalidIndices: `[${invalidIndices.join(", ")}] (总数: ${
+          invalidIndices: `[${invalidIndices.join(", ")}] (?餅㺭: ${
             invalidIndices.length
           })`,
         },
@@ -3357,39 +3360,39 @@ class ProxyServerSystem extends EventEmitter {
         const { targetIndex } = req.body;
         if (targetIndex !== undefined && targetIndex !== null) {
           this.logger.info(
-            `[WebUI] 收到切换到指定账号 #${targetIndex} 的请求...`,
+            `[WebUI] ?嗅�?�揢?唳?摰朞揭??#${targetIndex} ?�窈瘙?..`,
           );
           const result =
             await this.requestHandler._switchToSpecificAuth(targetIndex);
           if (result.success) {
-            res.status(200).send(`切换成功！已激活账号 #${result.newIndex}。`);
+            res.status(200).send(`?�揢?𣂼?嚗�歇瞈�瘣餉揭??#${result.newIndex}?�);
           } else {
             res.status(400).send(result.reason);
           }
         } else {
-          this.logger.info("[WebUI] 收到手动切换下一个账号的请求...");
+          this.logger.info("[WebUI] ?嗅�?见𢆡?�揢銝衤?銝芾揭?瑞?霂瑟?...");
           if (this.authSource.availableIndices.length <= 1) {
             return res
               .status(400)
-              .send("切换操作已取消：只有一个可用账号，无法切换。");
+              .send("?�揢?滢?撌脣?瘨�??芣?銝�銝芸虾?刻揭?瘀??䭾??�揢??);
           }
           const result = await this.requestHandler._switchToNextAuth();
           if (result.success) {
             res
               .status(200)
-              .send(`切换成功！已切换到账号 #${result.newIndex}。`);
+              .send(`?�揢?𣂼?嚗�歇?�揢?啗揭??#${result.newIndex}?�);
           } else if (result.fallback) {
             res
               .status(200)
-              .send(`切换失败，但已成功回退到账号 #${result.newIndex}。`);
+              .send(`?�揢憭梯揖嚗䔶?撌脫??笔??�?啗揭??#${result.newIndex}?�);
           } else {
-            res.status(409).send(`操作未执行: ${result.reason}`);
+            res.status(409).send(`?滢??芣�銵? ${result.reason}`);
           }
         }
       } catch (error) {
         res
           .status(500)
-          .send(`致命错误：操作失败！请检查日志。错误: ${error.message}`);
+          .send(`?游𦶢?躰秤嚗𡁏?雿𨅯仃韐伐?霂瑟??交𠯫敹𨰜��?霂? ${error.message}`);
       }
     });
     app.post("/api/set-mode", isAuthenticated, (req, res) => {
@@ -3397,19 +3400,19 @@ class ProxyServerSystem extends EventEmitter {
       if (newMode === "fake" || newMode === "real") {
         this.streamingMode = newMode;
         this.logger.info(
-          `[WebUI] 流式模式已由认证用户切换为: ${this.streamingMode}`,
+          `[WebUI] 瘚�?璅∪?撌脩眏霈方??冽�?�揢銝? ${this.streamingMode}`,
         );
-        res.status(200).send(`流式模式已切换为: ${this.streamingMode}`);
+        res.status(200).send(`瘚�?璅∪?撌脣??Ｖ蛹: ${this.streamingMode}`);
       } else {
-        res.status(400).send('无效模式. 请用 "fake" 或 "real".');
+        res.status(400).send('?䭾?璅∪?. 霂瑞鍂 "fake" ??"real".');
       }
     });
 
     app.post("/api/toggle-force-thinking", isAuthenticated, (req, res) => {
       this.forceThinking = !this.forceThinking;
-      const statusText = this.forceThinking ? "已启用" : "已关闭";
-      this.logger.info(`[WebUI] 强制推理开关已切换为: ${statusText}`);
-      res.status(200).send(`强制推理模式: ${statusText}`);
+      const statusText = this.forceThinking ? "撌脣鍳?? : "撌脣�??;
+      this.logger.info(`[WebUI] 撘箏�?函?撘�?喳歇?�揢銝? ${statusText}`);
+      res.status(200).send(`撘箏�?函?璅∪?: ${statusText}`);
     });
 
     app.use(this._createAuthMiddleware());
@@ -3463,7 +3466,7 @@ async function initializeServer() {
     const serverSystem = new ProxyServerSystem();
     await serverSystem.start(initialAuthIndex);
   } catch (error) {
-    console.error("❌ 服务器启动失败:", error.message);
+    console.error("???滚𦛚?典鍳?典仃韐?", error.message);
     process.exit(1);
   }
 }
@@ -3473,3 +3476,4 @@ if (require.main === module) {
 }
 
 module.exports = { ProxyServerSystem, BrowserManager, initializeServer };
+
