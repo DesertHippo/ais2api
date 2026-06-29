@@ -1882,7 +1882,13 @@ class RequestHandler {
         res.write("data: [DONE]\n\n");
         res.end();
       } else {
-        res.status(200).json({ id: `chatcmpl-${requestId}`, object: "chat.completion", created: Math.floor(Date.now() / 1000), model: model, choices: [{ index: 0, message: { role: "assistant", content: responseText }, finish_reason: "stop" }] });
+        const responseJson = { id: `chatcmpl-${requestId}`, object: "chat.completion", created: Math.floor(Date.now() / 1000), model: model, choices: [{ index: 0, message: { role: "assistant", content: responseText }, finish_reason: "stop" }] };
+        if (res.headersSent) {
+            res.write(JSON.stringify(responseJson));
+            res.end();
+        } else {
+            res.status(200).json(responseJson);
+        }
       }
     } catch (error) {
       this.logger.error(`[Adapter] 寫入回應時發生錯誤: ${error.message}`);
