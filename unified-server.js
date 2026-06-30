@@ -1098,17 +1098,7 @@ class BrowserManager {
                       return;
                   }
                   
-                  if (trimmed.includes("{")) {
-                      let openBraces = (trimmed.match(/\{/g) || []).length;
-                      let closeBraces = (trimmed.match(/\}/g) || []).length;
-                      let openBrackets = (trimmed.match(/\[/g) || []).length;
-                      let closeBrackets = (trimmed.match(/\]/g) || []).length;
-                      if ((openBraces > 0 && openBraces !== closeBraces) || (openBrackets > 0 && openBrackets !== closeBrackets)) {
-                          console.error("[UI Auto] ERROR: JSON mismatch detected! Likely cut off by silent censorship or max tokens. Forcing retry!");
-                          resolve("__UI_AUTO_GENERIC_ERROR__");
-                          return;
-                      }
-                  }
+                  
                   resolve(text);
                   return;
               }
