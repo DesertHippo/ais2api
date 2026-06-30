@@ -974,7 +974,7 @@ class BrowserManager {
 
       await this.page.fill('textarea[aria-label="Enter a prompt"]', promptText, { timeout: 10000 });
       await this.page.waitForTimeout(100);
-      await this.page.focus('textarea[aria-label="Enter a prompt"]', { timeout: 5000 });
+      await this.page.focus('textarea[aria-label="Enter a prompt"]', { timeout: 15000 });
       await this.page.keyboard.press('Control+Enter');
       
       // Fallback: 確保真的有按下去，如果 Control+Enter 被 React 忽略，直接找按鈕點擊
@@ -1091,6 +1091,13 @@ class BrowserManager {
               if (!isGenerating && Date.now() - startTime > 3000) {
                   clearInterval(check);
                   const trimmed = text.trim();
+                  
+                  if (trimmed.length === 0) {
+                      console.error("[UI Auto] ERROR: AI generated an empty response! Forcing retry!");
+                      resolve("__UI_AUTO_GENERIC_ERROR__");
+                      return;
+                  }
+                  
                   if (trimmed.includes("{")) {
                       let openBraces = (trimmed.match(/\{/g) || []).length;
                       let closeBraces = (trimmed.match(/\}/g) || []).length;
