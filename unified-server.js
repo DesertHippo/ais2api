@@ -1088,19 +1088,21 @@ class BrowserManager {
               const isGenerating = Array.from(document.querySelectorAll('button')).some(b => b.innerText && b.innerText.includes('Stop')) || 
                                    document.querySelector('button[aria-label*="Stop"]');
                                    
-              if (!isGenerating && Date.now() - startTime > 3000) {
-                  clearInterval(check);
+              if (!isGenerating) {
                   const trimmed = text.trim();
                   
                   if (trimmed.length === 0) {
-                      console.error("[UI Auto] ERROR: AI generated an empty response! Forcing retry!");
-                      resolve("__UI_AUTO_GENERIC_ERROR__");
+                      if (Date.now() - startTime > 30000) {
+                          clearInterval(check);
+                          console.error("[UI Auto] ERROR: AI generated an empty response after 30s! Forcing retry!");
+                          resolve("__UI_AUTO_GENERIC_ERROR__");
+                          return;
+                      }
+                  } else if (Date.now() - startTime > 3000) {
+                      clearInterval(check);
+                      resolve(text);
                       return;
                   }
-                  
-                  
-                  resolve(text);
-                  return;
               }
 
               if (text.length > 0 && text.length === lastLength) {
