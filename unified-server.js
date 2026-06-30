@@ -1165,6 +1165,8 @@ class BrowserManager {
             if (closeBtn) closeBtn.click();
         });
         throw new Error("GOOGLE_INTERNAL_ERROR: An internal error has occurred on Google's backend.");
+      } else if (response === "__UI_AUTO_GENERIC_ERROR__") {
+        throw new Error("EMPTY_RESPONSE: 網頁出現錯誤或無法取得回答，請重試。");
       }
       
       const finalResponse = response ? response.trim() : "";
