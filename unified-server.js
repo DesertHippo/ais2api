@@ -1817,12 +1817,22 @@ class RequestHandler {
         systemInstructionsText = googleBody.systemInstruction.parts.map(p => p.text).join("\n");
     }
     
-    for (const content of googleBody.contents) {
-        const textParts = content.parts.map(p => p.text).join("\n");
-        const role = content.role === "model" ? "Assistant" : "User";
-        formattedPromptText += `[${role}]\n${textParts}\n\n`;
+    if (googleBody.contents.length === 1 && googleBody.contents[0].role === "user") {
+        formattedPromptText = googleBody.contents[0].parts.map(p => p.text).join("\n");
+    } else {
+        for (const content of googleBody.contents) {
+            const textParts = content.parts.map(p => p.text).join("\n");
+            const role = content.role === "model" ? "Assistant" : "User";
+            formattedPromptText += `[${role}]\n${textParts}\n\n`;
+        }
+        formattedPromptText = formattedPromptText.trimEnd();
+        const lastContent = googleBody.contents[googleBody.contents.length - 1];
+        if (!lastContent || lastContent.role !== "model") {
+            formattedPromptText += `\n\n[Assistant]\n`;
+        } else {
+            formattedPromptText += `\n`; 
+        }
     }
-    formattedPromptText += `[Assistant]\n`;
     
     const promptText = formattedPromptText.trim();
     
