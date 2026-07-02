@@ -866,15 +866,7 @@ class BrowserManager {
       await this.page.goto('https://aistudio.google.com/prompts/new_chat', { waitUntil: 'domcontentloaded' });
       await this.page.waitForSelector('textarea[aria-label="Enter a prompt"]', { timeout: 15000 }).catch(() => {});
       
-      // Handle response_format for JSON mode
-        if (googleBody.response_format && googleBody.response_format.type === "json_object") {
-             const jsonDirective = "SYSTEM DIRECTIVE: You MUST output ONLY valid JSON format. Do NOT wrap it in any formatting tags or markdown. Do NOT output conversational text.";
-             if (systemInstructionsText) {
-                 systemInstructionsText += "\n\n" + jsonDirective;
-             } else {
-                 systemInstructionsText = jsonDirective;
-             }
-        }
+
 
         // Handle System Instructions Native UI Box with Fallback
         let sysInstructionsInjected = false;
@@ -1851,6 +1843,16 @@ class RequestHandler {
         systemInstructionsText = googleBody.systemInstruction.parts.map(p => p.text).join("\n");
     }
     
+    // Handle response_format for JSON mode
+    if (googleBody.response_format && googleBody.response_format.type === "json_object") {
+         const jsonDirective = "SYSTEM DIRECTIVE: You MUST output ONLY valid JSON format. Do NOT wrap it in any formatting tags or markdown. Do NOT output conversational text.";
+         if (systemInstructionsText) {
+             systemInstructionsText += "\n\n" + jsonDirective;
+         } else {
+             systemInstructionsText = jsonDirective;
+         }
+    }
+
     if (googleBody.contents.length === 1 && googleBody.contents[0].role === "user") {
         formattedPromptText = googleBody.contents[0].parts.map(p => p.text).join("\n");
     } else {
@@ -1897,17 +1899,8 @@ class RequestHandler {
                 clearInterval(heartbeatInterval);
             }
         }, 15000); // 15 seconds
-    } else {
-        res.status(200).set({ "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-cache", "Connection": "keep-alive" });
-        res.write(` `); // Send initial whitespace heartbeat to keep GCP alive
-        heartbeatInterval = setInterval(() => {
-            if (!res.writableEnded) {
-                res.write(` `);
-            } else {
-                clearInterval(heartbeatInterval);
-            }
-        }, 15000); // 15 seconds
     }
+    // Removed whitespace heartbeat for non-stream requests to prevent early HTTP 200 OK headers.
 
     const maxGlobalRetries = 3;
     let hasAppliedJailbreak = false;
