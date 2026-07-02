@@ -866,31 +866,46 @@ class BrowserManager {
       await this.page.goto('https://aistudio.google.com/prompts/new_chat', { waitUntil: 'domcontentloaded' });
       await this.page.waitForSelector('textarea[aria-label="Enter a prompt"]', { timeout: 15000 }).catch(() => {});
       
-      // Handle System Instructions Native UI Box
-      if (systemInstructions) {
-        try {
-          this.logger.info("[UI Auto] 偵測到 System Instructions，嘗試輸入至原生設定框...");
-          const sysCard = await this.page.$('.system-instructions-card');
-          if (sysCard) {
-              await sysCard.click();
-              await this.page.waitForTimeout(500); // Wait for sliding panel to open
-              
-              // The textarea inside the system instructions panel has formcontrolname="systemInstructions" or similar
-              // We can find all textareas and pick the one that is NOT the main promptText box
-              await this.page.evaluate((sysText) => {
-                  const tas = Array.from(document.querySelectorAll('textarea'));
-                  const sysTa = tas.find(t => t.getAttribute('aria-label') !== 'Enter a prompt');
-                  if (sysTa) {
-                      sysTa.focus();
-                      document.execCommand('insertText', false, sysText);
-                  }
-              }, systemInstructions);
-              await this.page.waitForTimeout(500);
-          }
-        } catch (err) {
-            this.logger.warn("[UI Auto] 輸入 System Instructions 失敗: " + err.message);
+      // Handle response_format for JSON mode
+        if (googleBody.response_format && googleBody.response_format.type === "json_object") {
+             promptText += "\n\n[SYSTEM DIRECTIVE: You MUST output ONLY valid JSON format. Do NOT wrap it in any formatting tags or markdown. Do NOT output conversational text.]";
         }
-      }
+
+        // Handle System Instructions Native UI Box with Fallback
+        let sysInstructionsInjected = false;
+        if (systemInstructionsText) {
+          try {
+            this.logger.info("[UI Auto] 偵測到 System Instructions，嘗試輸入至原生設定框...");
+            const sysCard = await this.page.$('.system-instructions-card');
+            if (sysCard) {
+                await sysCard.click();
+                await this.page.waitForTimeout(500); 
+                const sysTaFound = await this.page.evaluate((sysText) => {
+                    const tas = Array.from(document.querySelectorAll('textarea'));
+                    const sysTa = tas.find(t => t.getAttribute('aria-label') !== 'Enter a prompt');
+                    if (sysTa) {
+                        sysTa.focus();
+                        document.execCommand('insertText', false, sysText);
+                        return true;
+                    }
+                    return false;
+                }, systemInstructionsText);
+                
+                if (sysTaFound) {
+                    sysInstructionsInjected = true;
+                    this.logger.info("[UI Auto] System Instructions 成功輸入至原生框。");
+                }
+                await this.page.waitForTimeout(500);
+            }
+          } catch (err) {
+            this.logger.warn("[UI Auto] 輸入 System Instructions 發生異常: " + err.message);
+          }
+          
+          if (!sysInstructionsInjected) {
+            this.logger.warn("[UI Auto] 找不到原生 System Instructions 框，啟用 Fallback：將其合併至對話開頭。");
+            promptText = "[System Instructions]\n" + systemInstructionsText + "\n\n[User Message]\n" + promptText;
+          }
+        }
 
       if (modelName) {
         this.logger.info(`[UI Auto] 切換模型: ${modelName}...`);
