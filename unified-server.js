@@ -1825,6 +1825,19 @@ class RequestHandler {
     formattedPromptText += `[Assistant]\n`;
     
     const promptText = formattedPromptText.trim();
+    
+    try {
+        const fs = require('fs');
+        const inputLogPath = 'C:\\ais2api\\ai_input_debug.log';
+        let logText = `\n\n=== [${new Date().toISOString()}] ===\n`;
+        logText += `[System Prompt]:\n${systemInstructionsText}\n\n`;
+        logText += `[User Prompt]:\n${promptText}\n`;
+        logText += `======================================================\n`;
+        fs.appendFileSync(inputLogPath, logText);
+    } catch (err) {
+        this.logger.error("Failed to write input log: " + err.message);
+    }
+
     const maxWaitMs = 300000; // Increased to 5 minutes for all models to support Thinking mode
     let responseText = "";
     let lastError = null;
