@@ -870,7 +870,7 @@ class BrowserManager {
 
         // Handle System Instructions Native UI Box with Fallback
         let sysInstructionsInjected = false;
-        if (systemInstructionsText) {
+        if (systemInstructions) {
           try {
             this.logger.info("[UI Auto] 偵測到 System Instructions，嘗試輸入至原生設定框...");
             const fillSysTa = async () => {
@@ -884,7 +884,7 @@ class BrowserManager {
                         return true;
                     }
                     return false;
-                }, systemInstructionsText);
+                }, systemInstructions);
             };
 
             let sysTaFound = await fillSysTa();
