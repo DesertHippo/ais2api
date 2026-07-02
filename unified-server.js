@@ -1171,7 +1171,13 @@ class BrowserManager {
         throw new Error("EMPTY_RESPONSE: 網頁出現錯誤或無法取得回答，請重試。");
       }
       
-      const finalResponse = response ? response.trim() : "";
+      let finalResponse = response ? response.trim() : "";
+      
+      // Clean up Google AI Studio code block UI artifacts that get extracted by the dumb DOM scraper
+      finalResponse = finalResponse.replace(/code\s+[a-zA-Z0-9_+*-]+\s*downloadcontent_copy\s*expand_less\s*/gi, '');
+      finalResponse = finalResponse.replace(/downloadcontent_copy\s*expand_less\s*/gi, '');
+      finalResponse = finalResponse.trim();
+      
       if (finalResponse === "") {
         const dumpPath = "C:\\ais2api\\empty_response_dump_" + Date.now() + ".png";
         await this.page.screenshot({ path: dumpPath }).catch(() => {});
