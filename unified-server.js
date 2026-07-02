@@ -868,7 +868,12 @@ class BrowserManager {
       
       // Handle response_format for JSON mode
         if (googleBody.response_format && googleBody.response_format.type === "json_object") {
-             promptText += "\n\n[SYSTEM DIRECTIVE: You MUST output ONLY valid JSON format. Do NOT wrap it in any formatting tags or markdown. Do NOT output conversational text.]";
+             const jsonDirective = "SYSTEM DIRECTIVE: You MUST output ONLY valid JSON format. Do NOT wrap it in any formatting tags or markdown. Do NOT output conversational text.";
+             if (systemInstructionsText) {
+                 systemInstructionsText += "\n\n" + jsonDirective;
+             } else {
+                 systemInstructionsText = jsonDirective;
+             }
         }
 
         // Handle System Instructions Native UI Box with Fallback
@@ -876,27 +881,35 @@ class BrowserManager {
         if (systemInstructionsText) {
           try {
             this.logger.info("[UI Auto] 偵測到 System Instructions，嘗試輸入至原生設定框...");
-            const sysCard = await this.page.$('.system-instructions-card');
-            if (sysCard) {
-                await sysCard.click();
-                await this.page.waitForTimeout(500); 
-                const sysTaFound = await this.page.evaluate((sysText) => {
+            const fillSysTa = async () => {
+                return await this.page.evaluate((sysText) => {
                     const tas = Array.from(document.querySelectorAll('textarea'));
-                    const sysTa = tas.find(t => t.getAttribute('aria-label') !== 'Enter a prompt');
+                    const sysTa = tas.find(t => t && t.getAttribute('aria-label') && t.getAttribute('aria-label').toLowerCase().includes('system instructions'));
                     if (sysTa) {
                         sysTa.focus();
+                        document.execCommand('selectAll', false, null);
                         document.execCommand('insertText', false, sysText);
                         return true;
                     }
                     return false;
                 }, systemInstructionsText);
-                
-                if (sysTaFound) {
-                    sysInstructionsInjected = true;
-                    this.logger.info("[UI Auto] System Instructions 成功輸入至原生框。");
+            };
+
+            let sysTaFound = await fillSysTa();
+            if (!sysTaFound) {
+                const sysCard = await this.page.$('.system-instructions-card, button[aria-label="System instructions"], button[data-test-system-instructions-card]');
+                if (sysCard) {
+                    await sysCard.click();
+                    await this.page.waitForTimeout(500); 
+                    sysTaFound = await fillSysTa();
                 }
-                await this.page.waitForTimeout(500);
             }
+            
+            if (sysTaFound) {
+                sysInstructionsInjected = true;
+                this.logger.info("[UI Auto] System Instructions 成功輸入至原生框。");
+            }
+            await this.page.waitForTimeout(500);
           } catch (err) {
             this.logger.warn("[UI Auto] 輸入 System Instructions 發生異常: " + err.message);
           }
@@ -1855,7 +1868,7 @@ class RequestHandler {
         }
     }
     
-    const promptText = formattedPromptText.trim();
+    let promptText = formattedPromptText.trim();
     
     try {
         const fs = require('fs');
@@ -3336,47 +3349,26 @@ class ProxyServerSystem extends EventEmitter {
 
     // TEMPORARY DIAGNOSTIC ENDPOINT - check what "Prohibited" text exists on the page
     app.get("/api/diagnose-prohibited", async (req, res) => {
-      try {
-        if (!browserManager || !browserManager.page) {
-          return res.status(500).json({ error: "No browser page available" });
-        }
-        const results = await browserManager.page.evaluate(() => {
-          const bodyText = document.body.innerText;
-          const matches = [];
-          const searchTerm = 'Prohibited';
-          let idx = 0;
-          while (true) {
-            idx = bodyText.indexOf(searchTerm, idx);
-            if (idx === -1) break;
-            const start = Math.max(0, idx - 150);
-            const end = Math.min(bodyText.length, idx + searchTerm.length + 150);
-            matches.push({ position: idx, context: bodyText.substring(start, end) });
-            idx += searchTerm.length;
+        try {
+          if (!this.page) {
+            return res.status(500).json({ error: "No browser page available" });
           }
-          const elementMatches = [];
-          document.querySelectorAll('*').forEach(el => {
-            if (el.children.length === 0 && el.innerText && el.innerText.includes('Prohibited')) {
-              elementMatches.push({
-                tag: el.tagName, className: el.className, id: el.id,
-                role: el.getAttribute('role'), ariaLabel: el.getAttribute('aria-label'),
-                parentTag: el.parentElement?.tagName, parentClass: el.parentElement?.className,
-                grandparentTag: el.parentElement?.parentElement?.tagName, 
-                grandparentClass: el.parentElement?.parentElement?.className,
-                text: el.innerText.substring(0, 500)
-              });
-            }
+          const results = await this.page.evaluate(() => {
+            const bodyText = document.body.innerText;
+            const bodyHtml = document.body.innerHTML;
+            const buttons = Array.from(document.querySelectorAll("button, [role='button'], .system-instructions-card, textarea")).map((b) => ({
+                tag: b.tagName,
+                text: b.innerText.substring(0, 50),
+                ariaLabel: b.getAttribute('aria-label'),
+                className: b.className
+            }));
+            return { buttons };
           });
-          return { bodyLength: bodyText.length, totalMatches: matches.length, matches, elementMatches };
-        });
-        // Also take a screenshot
-        const screenshotPath = "C:\\ais2api\\diagnose_prohibited_" + Date.now() + ".png";
-        await browserManager.page.screenshot({ path: screenshotPath });
-        results.screenshot = screenshotPath;
-        res.status(200).json(results);
-      } catch (err) {
-        res.status(500).json({ error: err.message });
-      }
-    });
+          res.status(200).json(results);
+        } catch (err) {
+          res.status(500).json({ error: err.message });
+        }
+      });
 
     app.get("/api/status", isAuthenticated, (req, res) => {
       const { config, requestHandler, authSource, browserManager } = this;
