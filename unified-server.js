@@ -1089,7 +1089,7 @@ class BrowserManager {
             
             // 快速失敗機制 (Fail-fast): 如果等太久連一個字都沒出來，直接放棄並觸發重試機制
             const isFlash = targetModelName.includes('flash');
-            const failFastLimit = isFlash ? 30000 : 60000;
+            const failFastLimit = isFlash ? 60000 : 120000;
             if (Date.now() - startTime > failFastLimit && chunks.length === 0) {
               const isGenerating = Array.from(document.querySelectorAll('button')).some(b => b.innerText && b.innerText.includes('Stop')) || 
                                    document.querySelector('button[aria-label*="Stop"]');
@@ -1112,9 +1112,9 @@ class BrowserManager {
                   const trimmed = text.trim();
                   
                   if (trimmed.length === 0) {
-                      if (Date.now() - startTime > 30000) {
+                      if (Date.now() - startTime > failFastLimit) {
                           clearInterval(check);
-                          console.error("[UI Auto] ERROR: AI generated an empty response after 30s! Forcing retry!");
+                          console.error(`[UI Auto] ERROR: AI generated an empty response after ${failFastLimit/1000}s! Forcing retry!`);
                           resolve("__UI_AUTO_GENERIC_ERROR__");
                           return;
                       }
